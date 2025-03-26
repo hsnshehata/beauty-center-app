@@ -1,1 +1,9 @@
-[]
+[
+  {
+    "userId": "123",
+    "pageId": "eftk",
+    "rating": "up",
+    "message": "جميل جدًا!",
+    "timestamp": "2025-03-26T10:00:00Z"
+  }
+]

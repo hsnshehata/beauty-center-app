@@ -7140,6 +7140,11 @@
       "role": "user",
       "content": "؟؟",
       "timestamp": "2025-03-28T02:03:48.878Z"
+    },
+    {
+      "role": "user",
+      "content": "السعر؟",
+      "timestamp": "2025-03-28T02:05:37.671Z"
     }
   ]
 }

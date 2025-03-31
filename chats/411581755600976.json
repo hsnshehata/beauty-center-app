@@ -612,6 +612,11 @@
       "role": "bot",
       "content": "طبعًا! دي رابط قائمة الأسعار: https://ghazl.onrender.com/prices.html#.\n\nهل حابة أعرض لك تفاصيل معينة عن الأسعار هنا؟",
       "timestamp": "2025-03-31T22:09:16.128Z"
+    },
+    {
+      "role": "user",
+      "content": "الميعاد المتاح",
+      "timestamp": "2025-03-31T22:10:43.650Z"
     }
   ]
 }

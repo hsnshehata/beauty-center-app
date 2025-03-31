@@ -432,6 +432,11 @@
       "role": "user",
       "content": "ممكن اعرف الاسعار",
       "timestamp": "2025-03-31T19:10:57.506Z"
+    },
+    {
+      "role": "bot",
+      "content": "طبعًا! هنا رابط قائمة الأسعار: https://ghazl.onrender.com/prices.html# \n\nهل تحبي عرض التفاصيل هنا؟",
+      "timestamp": "2025-03-31T19:10:59.493Z"
     }
   ]
 }

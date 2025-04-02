@@ -3181,6 +3181,11 @@
       "role": "user",
       "content": "الاسعار اي",
       "timestamp": "2025-04-02T21:01:14.784Z"
+    },
+    {
+      "role": "bot",
+      "content": "هتلاقي قائمة الأسعار كاملة من خلال الرابط ده: https://ghazl.onrender.com/prices.html# \n\nهل تحب أساعدك في حاجة معينة؟",
+      "timestamp": "2025-04-02T21:01:16.670Z"
     }
   ]
 }

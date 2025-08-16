@@ -2,13 +2,14 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Container, Row, Col, Card, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Card, Alert, ListGroup } from 'react-bootstrap';
 import Sidebar from '../components/Sidebar';
 import '../css/BookingDetails.css';
 
 function BookingDetailsPage() {
   const { id } = useParams();
   const [booking, setBooking] = useState(null);
+  const [installments, setInstallments] = useState([]);
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
@@ -19,18 +20,24 @@ function BookingDetailsPage() {
       return;
     }
 
-    const fetchBooking = async () => {
+    const fetchData = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/api/bookings/${id}/receipt`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setBooking(response.data);
+        const [bookingRes, installmentsRes] = await Promise.all([
+          axios.get(`http://localhost:5000/api/bookings/${id}/receipt`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          axios.get(`http://localhost:5000/api/installments/booking/${id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
+        setBooking(bookingRes.data);
+        setInstallments(installmentsRes.data);
       } catch (err) {
         setError(err.response?.data?.message || 'خطأ في جلب تفاصيل الحجز');
       }
     };
 
-    fetchBooking();
+    fetchData();
   }, [id, navigate]);
 
   if (error) {
@@ -89,6 +96,20 @@ function BookingDetailsPage() {
                 <strong>تم الإنشاء بواسطة:</strong> {booking.createdBy}<br />
                 <strong>تاريخ الإنشاء:</strong> {booking.createdAt}
               </Card.Text>
+              <h4>الأقساط</h4>
+              {installments.length > 0 ? (
+                <ListGroup>
+                  {installments.map((installment) => (
+                    <ListGroup.Item key={installment._id}>
+                      المبلغ: {installment.amount} جنيه - 
+                      تاريخ: {new Date(installment.createdAt).toLocaleDateString('ar-EG')} - 
+                      بواسطة: {installment.createdBy.username}
+                    </ListGroup.Item>
+                  ))}
+                </ListGroup>
+              ) : (
+                <p>لا توجد أقساط</p>
+              )}
             </Card.Body>
           </Card>
         </Col>

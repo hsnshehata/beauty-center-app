@@ -1,0 +1,5 @@
+/* client/src/css/Expenses.css */
+.container-fluid {
+  direction: rtl;
+  text-align: right;
+}

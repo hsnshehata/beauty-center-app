@@ -8,6 +8,13 @@ import BookingDetailsPage from './pages/BookingDetailsPage';
 import InstallmentPage from './pages/InstallmentPage';
 import EditBookingPage from './pages/EditBookingPage';
 import ServicePage from './pages/ServicePage';
+import UsersPage from './pages/UsersPage';
+import PackagesPage from './pages/PackagesPage';
+import DailyReportsPage from './pages/DailyReportsPage';
+import EmployeeReportsPage from './pages/EmployeeReportsPage';
+import EmployeesPage from './pages/EmployeesPage';
+import ExpensesPage from './pages/ExpensesPage';
+import AdvancesPage from './pages/AdvancesPage';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './css/App.css';
 
@@ -24,6 +31,13 @@ function App() {
           <Route path="/installment/:id" element={<InstallmentPage />} />
           <Route path="/edit-booking/:id" element={<EditBookingPage />} />
           <Route path="/services" element={<ServicePage />} />
+          <Route path="/users" element={<UsersPage />} />
+          <Route path="/packages" element={<PackagesPage />} />
+          <Route path="/reports/daily" element={<DailyReportsPage />} />
+          <Route path="/reports/employees" element={<EmployeeReportsPage />} />
+          <Route path="/employees" element={<EmployeesPage />} />
+          <Route path="/expenses" element={<ExpensesPage />} />
+          <Route path="/advances" element={<AdvancesPage />} />
         </Routes>
       </div>
     </Router>

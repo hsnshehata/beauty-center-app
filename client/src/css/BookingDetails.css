@@ -1,0 +1,5 @@
+/* client/src/css/BookingDetails.css */
+.container-fluid {
+  direction: rtl;
+  text-align: right;
+}

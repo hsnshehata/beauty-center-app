@@ -1,1 +1,0 @@
-# ghazal-bot-stats

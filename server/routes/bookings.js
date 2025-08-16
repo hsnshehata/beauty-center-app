@@ -137,6 +137,66 @@ router.get('/today', authMiddleware, restrictTo('admin', 'supervisor', 'worker')
   }
 });
 
+// عرض كل الحجوزات مع باجينيشن (للأدمن والمشرف)
+router.get('/', authMiddleware, restrictTo('admin', 'supervisor'), async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const skip = (page - 1) * limit;
+
+    const bookings = await Booking.find()
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate('packageId', 'name price type')
+      .populate('hennaPackageId', 'name price')
+      .populate('photoPackageId', 'name price')
+      .populate('returnedServices.serviceId', 'name price')
+      .populate('additionalService.serviceId', 'name price')
+      .populate('createdBy', 'username');
+
+    res.json(bookings);
+  } catch (error) {
+    res.status(500).json({ message: 'خطأ في السيرفر', error: error.message });
+  }
+});
+
+// البحث في الحجوزات (للأدمن والمشرف)
+router.get('/search', authMiddleware, restrictTo('admin', 'supervisor'), async (req, res) => {
+  try {
+    const { clientName, clientPhone, eventDate } = req.query;
+    const query = {};
+
+    if (clientName) {
+      query.clientName = { $regex: clientName, $options: 'i' };
+    }
+    if (clientPhone) {
+      query.clientPhone = { $regex: clientPhone, $options: 'i' };
+    }
+    if (eventDate) {
+      const start = new Date(eventDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 1);
+      query.eventDate = { $gte: start, $lt: end };
+    }
+
+    const bookings = await Booking.find(query)
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .populate('packageId', 'name price type')
+      .populate('hennaPackageId', 'name price')
+      .populate('photoPackageId', 'name price')
+      .populate('returnedServices.serviceId', 'name price')
+      .populate('additionalService.serviceId', 'name price')
+      .populate('createdBy', 'username');
+
+    res.json(bookings);
+  } catch (error) {
+    res.status(500).json({ message: 'خطأ في السيرفر', error: error.message });
+  }
+});
+
 // تعديل حجز (للأدمن والمشرف)
 router.put('/:id', authMiddleware, restrictTo('admin', 'supervisor'), async (req, res) => {
   try {

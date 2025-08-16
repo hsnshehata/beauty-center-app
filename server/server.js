@@ -1,5 +1,6 @@
 // server/server.js
 const express = require('express');
+const cors = require('cors');
 const connectDB = require('./db');
 const authRoutes = require('./routes/auth');
 const bookingRoutes = require('./routes/bookings');
@@ -12,6 +13,7 @@ const reportRoutes = require('./routes/reports');
 const app = express();
 const port = 5000;
 
+app.use(cors()); // إضافة CORS
 app.use(express.json());
 
 // ربط الداتابيز

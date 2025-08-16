@@ -1,0 +1,8 @@
+/* client/src/css/App.css */
+.app {
+  font-family: Arial, sans-serif;
+  direction: rtl;
+  text-align: right;
+  background-color: #f8f9fa;
+  min-height: 100vh;
+}

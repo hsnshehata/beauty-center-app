@@ -7,6 +7,7 @@ import BookingPage from './pages/BookingPage';
 import BookingDetailsPage from './pages/BookingDetailsPage';
 import InstallmentPage from './pages/InstallmentPage';
 import EditBookingPage from './pages/EditBookingPage';
+import ServicePage from './pages/ServicePage';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './css/App.css';
 
@@ -22,6 +23,7 @@ function App() {
           <Route path="/booking/:id" element={<BookingDetailsPage />} />
           <Route path="/installment/:id" element={<InstallmentPage />} />
           <Route path="/edit-booking/:id" element={<EditBookingPage />} />
+          <Route path="/services" element={<ServicePage />} />
         </Routes>
       </div>
     </Router>

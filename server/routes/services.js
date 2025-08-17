@@ -6,7 +6,7 @@ const Service = require('../models/Service');
 const ServiceExecution = require('../models/ServiceExecution');
 const Employee = require('../models/Employee');
 
-// إضافة خدمة فورية (للأدمن بس)
+// إضافة خدمة فورية جديدة (للأدمن بس)
 router.post('/', authMiddleware, restrictTo('admin'), async (req, res) => {
   try {
     const { name, price } = req.body;
@@ -62,6 +62,19 @@ router.post('/execute', authMiddleware, restrictTo('admin', 'supervisor'), async
     await serviceExecution.save();
 
     res.status(201).json({ message: 'تم تسجيل الخدمة المنفذة بنجاح', serviceExecution });
+  } catch (error) {
+    res.status(500).json({ message: 'خطأ في السيرفر', error: error.message });
+  }
+});
+
+// عرض كل الخدمات المنفذة
+router.get('/execute', authMiddleware, restrictTo('admin', 'supervisor'), async (req, res) => {
+  try {
+    const executions = await ServiceExecution.find()
+      .populate('serviceId', 'name price')
+      .populate('employeeId', 'name')
+      .populate('createdBy', 'username');
+    res.json(executions);
   } catch (error) {
     res.status(500).json({ message: 'خطأ في السيرفر', error: error.message });
   }

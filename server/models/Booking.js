@@ -10,32 +10,39 @@ const bookingSchema = new mongoose.Schema({
   hennaPackageId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Package',
-    required: false,
   },
   photoPackageId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Package',
-    required: false,
   },
   returnedServices: [{
-    serviceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Service' },
+    serviceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'PackageService',
+    },
     price: Number,
   }],
   additionalService: {
-    serviceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Service' },
+    serviceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'PackageService',
+    },
     price: Number,
   },
   clientName: {
     type: String,
     required: true,
+    trim: true,
   },
   clientPhone: {
     type: String,
     required: true,
+    trim: true,
   },
   city: {
     type: String,
     required: true,
+    trim: true,
   },
   eventDate: {
     type: Date,
@@ -43,7 +50,6 @@ const bookingSchema = new mongoose.Schema({
   },
   hennaDate: {
     type: Date,
-    required: false,
   },
   hairStraightening: {
     type: Boolean,
@@ -51,11 +57,10 @@ const bookingSchema = new mongoose.Schema({
   },
   hairStraighteningPrice: {
     type: Number,
-    required: false,
+    default: 0,
   },
   hairStraighteningDate: {
     type: Date,
-    required: false,
   },
   totalPrice: {
     type: Number,

@@ -4,9 +4,8 @@ const router = express.Router();
 const { authMiddleware, restrictTo } = require('../middleware/authMiddleware');
 const Booking = require('../models/Booking');
 const Package = require('../models/Package');
-const Service = require('../models/Service');
+const PackageService = require('../models/PackageService');
 
-// إضافة حجز جديد (للأدمن والمشرف بس)
 router.post('/', authMiddleware, restrictTo('admin', 'supervisor'), async (req, res) => {
   try {
     const {
@@ -31,7 +30,7 @@ router.post('/', authMiddleware, restrictTo('admin', 'supervisor'), async (req, 
     }
 
     // التحقق من وجود الباكدج الرئيسي
-    const package = await Package.findById(packageId);
+    const package = await Package.findById(packageId).populate('services');
     if (!package) {
       return res.status(400).json({ message: 'الباكدج الرئيسي غير موجود' });
     }
@@ -60,26 +59,30 @@ router.post('/', authMiddleware, restrictTo('admin', 'supervisor'), async (req, 
     // خصم المرتجعات لو موجودة
     if (returnedServices && returnedServices.length > 0) {
       for (const returned of returnedServices) {
-        const service = await Service.findById(returned.serviceId);
+        const service = await PackageService.findById(returned.serviceId);
         if (!service) {
-          return res.status(400).json({ message: 'خدمة مرتجعة غير موجودة' });
+          return res.status(400).json({ message: `الخدمة المرتجعة ${returned.serviceId} غير موجودة` });
         }
-        totalPrice -= returned.price || service.price;
+        // التحقق من إن الخدمة المرتجعة موجودة في الباكدج
+        if (!package.services.some(s => s._id.toString() === returned.serviceId)) {
+          return res.status(400).json({ message: `الخدمة ${returned.serviceId} غير موجودة في الباكدج المختار` });
+        }
+        totalPrice -= parseFloat(returned.price) || service.price;
       }
     }
 
     // إضافة خدمة إضافية لو موجودة
     if (additionalService && additionalService.serviceId) {
-      const service = await Service.findById(additionalService.serviceId);
+      const service = await PackageService.findById(additionalService.serviceId);
       if (!service) {
         return res.status(400).json({ message: 'الخدمة الإضافية غير موجودة' });
       }
-      totalPrice += additionalService.price || service.price;
+      totalPrice += parseFloat(additionalService.price) || service.price;
     }
 
     // إضافة فرد الشعر لو موجود
     if (hairStraightening && hairStraighteningPrice) {
-      totalPrice += hairStraighteningPrice;
+      totalPrice += parseFloat(hairStraighteningPrice);
     }
 
     // إنشاء الحجز
@@ -105,11 +108,12 @@ router.post('/', authMiddleware, restrictTo('admin', 'supervisor'), async (req, 
 
     res.status(201).json({ message: 'تم إنشاء الحجز بنجاح', booking });
   } catch (error) {
+    console.error(error); // لتسجيل الإيرور في الـ server logs
     res.status(500).json({ message: 'خطأ في السيرفر', error: error.message });
   }
 });
 
-// عرض حجوزات اليوم (للأدمن، المشرف، والعامل)
+// عرض حجوزات اليوم
 router.get('/today', authMiddleware, restrictTo('admin', 'supervisor', 'worker'), async (req, res) => {
   try {
     const today = new Date();
@@ -124,7 +128,7 @@ router.get('/today', authMiddleware, restrictTo('admin', 'supervisor', 'worker')
         { hairStraighteningDate: { $gte: today, $lt: tomorrow } },
       ],
     })
-      .populate('packageId', 'name price type')
+      .populate('packageId', 'name price type services')
       .populate('hennaPackageId', 'name price')
       .populate('photoPackageId', 'name price')
       .populate('returnedServices.serviceId', 'name price')
@@ -137,7 +141,7 @@ router.get('/today', authMiddleware, restrictTo('admin', 'supervisor', 'worker')
   }
 });
 
-// عرض كل الحجوزات مع باجينيشن (للأدمن والمشرف)
+// عرض كل الحجوزات مع باجينيشن
 router.get('/', authMiddleware, restrictTo('admin', 'supervisor'), async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -148,7 +152,7 @@ router.get('/', authMiddleware, restrictTo('admin', 'supervisor'), async (req, r
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .populate('packageId', 'name price type')
+      .populate('packageId', 'name price type services')
       .populate('hennaPackageId', 'name price')
       .populate('photoPackageId', 'name price')
       .populate('returnedServices.serviceId', 'name price')
@@ -161,7 +165,7 @@ router.get('/', authMiddleware, restrictTo('admin', 'supervisor'), async (req, r
   }
 });
 
-// البحث في الحجوزات (للأدمن والمشرف)
+// البحث في الحجوزات
 router.get('/search', authMiddleware, restrictTo('admin', 'supervisor'), async (req, res) => {
   try {
     const { clientName, clientPhone, eventDate } = req.query;
@@ -184,7 +188,7 @@ router.get('/search', authMiddleware, restrictTo('admin', 'supervisor'), async (
     const bookings = await Booking.find(query)
       .sort({ createdAt: -1 })
       .limit(50)
-      .populate('packageId', 'name price type')
+      .populate('packageId', 'name price type services')
       .populate('hennaPackageId', 'name price')
       .populate('photoPackageId', 'name price')
       .populate('returnedServices.serviceId', 'name price')
@@ -197,120 +201,13 @@ router.get('/search', authMiddleware, restrictTo('admin', 'supervisor'), async (
   }
 });
 
-// تعديل حجز (للأدمن والمشرف)
-router.put('/:id', authMiddleware, restrictTo('admin', 'supervisor'), async (req, res) => {
-  try {
-    const { id } = req.params;
-    const {
-      packageId,
-      hennaPackageId,
-      photoPackageId,
-      returnedServices,
-      additionalService,
-      clientName,
-      clientPhone,
-      city,
-      eventDate,
-      hennaDate,
-      hairStraightening,
-      hairStraighteningPrice,
-      hairStraighteningDate,
-    } = req.body;
-
-    // التحقق من وجود الحجز
-    const booking = await Booking.findById(id);
-    if (!booking) {
-      return res.status(404).json({ message: 'الحجز غير موجود' });
-    }
-
-    // التحقق من الحقول المطلوبة
-    if (!packageId || !clientName || !clientPhone || !city || !eventDate) {
-      return res.status(400).json({ message: 'كل الحقول الأساسية مطلوبة' });
-    }
-
-    // التحقق من وجود الباكدج الرئيسي
-    const package = await Package.findById(packageId);
-    if (!package) {
-      return res.status(400).json({ message: 'الباكدج الرئيسي غير موجود' });
-    }
-
-    // حساب الإجمالي
-    let totalPrice = package.price;
-
-    // إضافة باكدج الحنة لو موجود
-    if (hennaPackageId) {
-      const hennaPackage = await Package.findById(hennaPackageId);
-      if (!hennaPackage || hennaPackage.type !== 'makeup') {
-        return res.status(400).json({ message: 'باكدج الحنة غير صالح' });
-      }
-      totalPrice += hennaPackage.price;
-    }
-
-    // إضافة باكدج التصوير لو موجود
-    if (photoPackageId) {
-      const photoPackage = await Package.findById(photoPackageId);
-      if (!photoPackage || photoPackage.type !== 'photo') {
-        return res.status(400).json({ message: 'باكدج التصوير غير صالح' });
-      }
-      totalPrice += photoPackage.price;
-    }
-
-    // خصم المرتجعات لو موجودة
-    if (returnedServices && returnedServices.length > 0) {
-      for (const returned of returnedServices) {
-        const service = await Service.findById(returned.serviceId);
-        if (!service) {
-          return res.status(400).json({ message: 'خدمة مرتجعة غير موجودة' });
-        }
-        totalPrice -= returned.price || service.price;
-      }
-    }
-
-    // إضافة خدمة إضافية لو موجودة
-    if (additionalService && additionalService.serviceId) {
-      const service = await Service.findById(additionalService.serviceId);
-      if (!service) {
-        return res.status(400).json({ message: 'الخدمة الإضافية غير موجودة' });
-      }
-      totalPrice += additionalService.price || service.price;
-    }
-
-    // إضافة فرد الشعر لو موجود
-    if (hairStraightening && hairStraighteningPrice) {
-      totalPrice += hairStraighteningPrice;
-    }
-
-    // تحديث الحجز
-    booking.packageId = packageId;
-    booking.hennaPackageId = hennaPackageId;
-    booking.photoPackageId = photoPackageId;
-    booking.returnedServices = returnedServices;
-    booking.additionalService = additionalService;
-    booking.clientName = clientName;
-    booking.clientPhone = clientPhone;
-    booking.city = city;
-    booking.eventDate = eventDate;
-    booking.hennaDate = hennaDate;
-    booking.hairStraightening = hairStraightening;
-    booking.hairStraighteningPrice = hairStraighteningPrice;
-    booking.hairStraighteningDate = hairStraighteningDate;
-    booking.totalPrice = totalPrice;
-
-    await booking.save();
-
-    res.json({ message: 'تم تعديل الحجز بنجاح', booking });
-  } catch (error) {
-    res.status(500).json({ message: 'خطأ في السيرفر', error: error.message });
-  }
-});
-
-// جلب بيانات الوصل للطباعة (للأدمن، المشرف، والعامل)
+// جلب بيانات الوصل للطباعة
 router.get('/:id/receipt', authMiddleware, restrictTo('admin', 'supervisor', 'worker'), async (req, res) => {
   try {
     const { id } = req.params;
 
     const booking = await Booking.findById(id)
-      .populate('packageId', 'name price type')
+      .populate('packageId', 'name price type services')
       .populate('hennaPackageId', 'name price')
       .populate('photoPackageId', 'name price')
       .populate('returnedServices.serviceId', 'name price')
@@ -321,7 +218,6 @@ router.get('/:id/receipt', authMiddleware, restrictTo('admin', 'supervisor', 'wo
       return res.status(404).json({ message: 'الحجز غير موجود' });
     }
 
-    // تنسيق بيانات الوصل
     const receipt = {
       clientName: booking.clientName,
       clientPhone: booking.clientPhone,

@@ -13,12 +13,12 @@ const packageSchema = new mongoose.Schema({
   },
   type: {
     type: String,
+    enum: ['makeup', 'photo'],
     required: true,
-    enum: ['makeup', 'photo'], // ميك اب أو تصوير
   },
   services: [{
-    serviceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Service' },
-    price: Number,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'PackageService',
   }],
   createdAt: {
     type: Date,

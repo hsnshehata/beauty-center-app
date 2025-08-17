@@ -13,6 +13,7 @@ function BookingPage() {
   const [services, setServices] = useState([]);
   const [page, setPage] = useState(1);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState({ clientName: '', clientPhone: '', eventDate: '' });
   const [formData, setFormData] = useState({
@@ -48,12 +49,12 @@ function BookingPage() {
           axios.get('http://localhost:5000/api/packages', {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get('http://localhost:5000/api/services', {
+          axios.get('http://localhost:5000/api/packageServices', {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
         setBookings(bookingsRes.data);
-        setPackages(packagesRes.data.map(p => ({ value: p._id, label: `${p.name} (${p.price} جنيه)` })));
+        setPackages(packagesRes.data.map(p => ({ value: p._id, label: `${p.name} (${p.price} جنيه)`, services: p.services })));
         setServices(servicesRes.data.map(s => ({ value: s._id, label: `${s.name} (${s.price} جنيه)` })));
       } catch (err) {
         setError(err.response?.data?.message || 'خطأ في جلب البيانات');
@@ -80,6 +81,7 @@ function BookingPage() {
     setFormData({
       ...formData,
       [name]: selectedOption ? selectedOption.value : '',
+      ...(name === 'packageId' ? { returnedServices: [] } : {}),
     });
   };
 
@@ -88,7 +90,7 @@ function BookingPage() {
       ...formData,
       returnedServices: selectedOptions.map(option => ({
         serviceId: option.value,
-        price: services.find(s => s.value === option.value)?.label.match(/\d+/)?.[0] || 0,
+        price: parseFloat(services.find(s => s.value === option.value)?.label.match(/\d+/)?.[0]) || 0,
       })),
     });
   };
@@ -98,7 +100,7 @@ function BookingPage() {
       ...formData,
       additionalService: {
         serviceId: selectedOption ? selectedOption.value : '',
-        price: selectedOption ? services.find(s => s.value === selectedOption.value)?.label.match(/\d+/)?.[0] || 0 : 0,
+        price: selectedOption ? parseFloat(services.find(s => s.value === selectedOption.value)?.label.match(/\d+/)?.[0]) || 0 : 0,
       },
     });
   };
@@ -107,9 +109,10 @@ function BookingPage() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:5000/api/bookings', formData, {
+      const response = await axios.post('http://localhost:5000/api/bookings', formData, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      setSuccess('تم إنشاء الحجز بنجاح');
       setShowModal(false);
       setFormData({
         packageId: '',
@@ -126,10 +129,11 @@ function BookingPage() {
         hairStraighteningPrice: 0,
         hairStraighteningDate: '',
       });
-      const response = await axios.get(`http://localhost:5000/api/bookings?page=${page}&limit=50`, {
+      const bookingsRes = await axios.get(`http://localhost:5000/api/bookings?page=${page}&limit=50`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setBookings(response.data);
+      setBookings(bookingsRes.data);
+      setTimeout(() => setSuccess(''), 2000);
     } catch (err) {
       setError(err.response?.data?.message || 'خطأ في إضافة الحجز');
     }
@@ -150,6 +154,10 @@ function BookingPage() {
     }
   };
 
+  // جلب خدمات الباكدج المختار فقط
+  const selectedPackage = packages.find(p => p.value === formData.packageId);
+  const packageServices = selectedPackage ? services.filter(s => selectedPackage.services.some(ps => ps._id === s.value)) : [];
+
   return (
     <Container fluid>
       <Row>
@@ -159,6 +167,7 @@ function BookingPage() {
         <Col md={9} className="p-4">
           <h2>حجز ميك اب</h2>
           {error && <Alert variant="danger">{error}</Alert>}
+          {success && <Alert variant="success">{success}</Alert>}
           <Form onSubmit={handleSearch} className="mb-3">
             <Row>
               <Col md={4}>
@@ -250,6 +259,7 @@ function BookingPage() {
                   <Form.Label>نوع الباكدج</Form.Label>
                   <Select
                     options={packages}
+                    value={packages.find(p => p.value === formData.packageId)}
                     onChange={(option) => handleSelectChange('packageId', option)}
                     placeholder="اختر الباكدج"
                   />
@@ -258,6 +268,7 @@ function BookingPage() {
                   <Form.Label>باكدج الحنة (اختياري)</Form.Label>
                   <Select
                     options={packages.filter(p => p.label.includes('ميك اب'))}
+                    value={packages.find(p => p.value === formData.hennaPackageId)}
                     onChange={(option) => handleSelectChange('hennaPackageId', option)}
                     placeholder="اختر باكدج الحنة"
                     isClearable
@@ -267,6 +278,7 @@ function BookingPage() {
                   <Form.Label>باكدج التصوير (اختياري)</Form.Label>
                   <Select
                     options={packages.filter(p => p.label.includes('تصوير'))}
+                    value={packages.find(p => p.value === formData.photoPackageId)}
                     onChange={(option) => handleSelectChange('photoPackageId', option)}
                     placeholder="اختر باكدج التصوير"
                     isClearable
@@ -276,15 +288,18 @@ function BookingPage() {
                   <Form.Label>مرتجع من الباكدجات (اختياري)</Form.Label>
                   <Select
                     isMulti
-                    options={services}
+                    options={packageServices}
+                    value={packageServices.filter(s => formData.returnedServices.some(rs => rs.serviceId === s.value))}
                     onChange={handleReturnedServicesChange}
                     placeholder="اختر الخدمات المرتجعة"
+                    isDisabled={!formData.packageId}
                   />
                 </Form.Group>
                 <Form.Group className="mb-3">
                   <Form.Label>خدمة إضافية (اختياري)</Form.Label>
                   <Select
                     options={services}
+                    value={services.find(s => s.value === formData.additionalService.serviceId)}
                     onChange={handleAdditionalServiceChange}
                     placeholder="اختر خدمة إضافية"
                     isClearable

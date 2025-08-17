@@ -43,7 +43,8 @@ function Sidebar() {
               {role === 'admin' && (
                 <>
                   <Nav.Link href="/users">إضافة مسؤول</Nav.Link>
-                  <Nav.Link href="/packages">إضافة خدمات/باكدجات</Nav.Link>
+                  <Nav.Link href="/packageServices">خدمات الباكدجات</Nav.Link>
+                  <Nav.Link href="/packages">إضافة باكدجات</Nav.Link>
                   <Nav.Link href="/reports/employees">تقارير الموظفين</Nav.Link>
                 </>
               )}

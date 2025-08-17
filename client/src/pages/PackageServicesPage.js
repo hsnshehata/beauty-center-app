@@ -1,21 +1,17 @@
-// client/src/pages/PackagesPage.js
+// client/src/pages/PackageServicesPage.js
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Container, Row, Col, Form, Button, Alert, Card, Modal } from 'react-bootstrap';
-import Select from 'react-select';
 import Sidebar from '../components/Sidebar';
-import '../css/Packages.css';
+import '../css/PackageServices.css';
 
-function PackagesPage() {
+function PackageServicesPage() {
   const [formData, setFormData] = useState({
     name: '',
     price: '',
-    type: 'makeup',
-    services: [],
   });
   const [editData, setEditData] = useState(null);
-  const [packages, setPackages] = useState([]);
   const [services, setServices] = useState([]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -30,24 +26,18 @@ function PackagesPage() {
       return;
     }
 
-    const fetchData = async () => {
+    const fetchServices = async () => {
       try {
-        const [packagesRes, servicesRes] = await Promise.all([
-          axios.get('http://localhost:5000/api/packages', {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          axios.get('http://localhost:5000/api/packageServices', {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-        ]);
-        setPackages(packagesRes.data);
-        setServices(servicesRes.data.map(s => ({ value: s._id, label: `${s.name} (${s.price} جنيه)` })));
+        const response = await axios.get('http://localhost:5000/api/packageServices', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setServices(response.data);
       } catch (err) {
-        setError(err.response?.data?.message || 'خطأ في جلب البيانات');
+        setError(err.response?.data?.message || 'خطأ في جلب الخدمات');
       }
     };
 
-    fetchData();
+    fetchServices();
   }, [navigate]);
 
   const handleInputChange = (e) => {
@@ -56,28 +46,23 @@ function PackagesPage() {
     setData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleServicesChange = (selectedOptions) => {
-    const setData = editData ? setEditData : setFormData;
-    setData(prev => ({ ...prev, services: selectedOptions.map(option => option.value) }));
-  };
-
   const handleAddSubmit = async (e) => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:5000/api/packages', formData, {
+      await axios.post('http://localhost:5000/api/packageServices', formData, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setSuccess('تم إنشاء الباكدج بنجاح');
-      setFormData({ name: '', price: '', type: 'makeup', services: [] });
+      setSuccess('تم إنشاء الخدمة بنجاح');
+      setFormData({ name: '', price: '' });
       setShowAddModal(false);
-      const response = await axios.get('http://localhost:5000/api/packages', {
+      const response = await axios.get('http://localhost:5000/api/packageServices', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setPackages(response.data);
+      setServices(response.data);
       setTimeout(() => setSuccess(''), 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'خطأ في إنشاء الباكدج');
+      setError(err.response?.data?.message || 'خطأ في إنشاء الخدمة');
     }
   };
 
@@ -85,29 +70,27 @@ function PackagesPage() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`http://localhost:5000/api/packages/${editData._id}`, editData, {
+      await axios.put(`http://localhost:5000/api/packageServices/${editData._id}`, editData, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setSuccess('تم تعديل الباكدج بنجاح');
+      setSuccess('تم تعديل الخدمة بنجاح');
       setEditData(null);
       setShowEditModal(false);
-      const response = await axios.get('http://localhost:5000/api/packages', {
+      const response = await axios.get('http://localhost:5000/api/packageServices', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setPackages(response.data);
+      setServices(response.data);
       setTimeout(() => setSuccess(''), 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'خطأ في تعديل الباكدج');
+      setError(err.response?.data?.message || 'خطأ في تعديل الخدمة');
     }
   };
 
-  const handleEdit = (pkg) => {
+  const handleEdit = (service) => {
     setEditData({
-      _id: pkg._id,
-      name: pkg.name,
-      price: pkg.price,
-      type: pkg.type,
-      services: pkg.services.map(s => s._id),
+      _id: service._id,
+      name: service.name,
+      price: service.price,
     });
     setShowEditModal(true);
   };
@@ -115,14 +98,14 @@ function PackagesPage() {
   const handleDelete = async (id) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/api/packages/${id}`, {
+      await axios.delete(`http://localhost:5000/api/packageServices/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setSuccess('تم حذف الباكدج بنجاح');
-      setPackages(packages.filter(pkg => pkg._id !== id));
+      setSuccess('تم حذف الخدمة بنجاح');
+      setServices(services.filter(s => s._id !== id));
       setTimeout(() => setSuccess(''), 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'خطأ في حذف الباكدج');
+      setError(err.response?.data?.message || 'خطأ في حذف الخدمة');
     }
   };
 
@@ -133,28 +116,26 @@ function PackagesPage() {
           <Sidebar />
         </Col>
         <Col md={9} className="p-4">
-          <h2>إضافة خدمات/باكدجات</h2>
+          <h2>خدمات الباكدجات</h2>
           {error && <Alert variant="danger">{error}</Alert>}
           {success && <Alert variant="success">{success}</Alert>}
           <Button variant="primary" onClick={() => setShowAddModal(true)} className="mb-3">
-            إضافة باكدج جديد
+            إضافة خدمة جديدة
           </Button>
-          <h4>قائمة الباكدجات</h4>
+          <h4>قائمة خدمات الباكدجات</h4>
           <Row>
-            {packages.map(pkg => (
-              <Col md={4} key={pkg._id} className="mb-3">
+            {services.map(service => (
+              <Col md={4} key={service._id} className="mb-3">
                 <Card>
                   <Card.Body>
-                    <Card.Title>{pkg.name}</Card.Title>
+                    <Card.Title>{service.name}</Card.Title>
                     <Card.Text>
-                      السعر: {pkg.price} جنيه<br />
-                      النوع: {pkg.type === 'makeup' ? 'ميك اب' : 'تصوير'}<br />
-                      الخدمات: {pkg.services.map(s => s.name).join(', ') || 'لا توجد خدمات'}
+                      السعر: {service.price} جنيه
                     </Card.Text>
-                    <Button variant="warning" onClick={() => handleEdit(pkg)} className="me-2">
+                    <Button variant="warning" onClick={() => handleEdit(service)} className="me-2">
                       تعديل
                     </Button>
-                    <Button variant="danger" onClick={() => handleDelete(pkg._id)}>
+                    <Button variant="danger" onClick={() => handleDelete(service._id)}>
                       حذف
                     </Button>
                   </Card.Body>
@@ -164,18 +145,18 @@ function PackagesPage() {
           </Row>
           <Modal show={showAddModal} onHide={() => setShowAddModal(false)}>
             <Modal.Header closeButton>
-              <Modal.Title>إضافة باكدج جديد</Modal.Title>
+              <Modal.Title>إضافة خدمة جديدة</Modal.Title>
             </Modal.Header>
             <Modal.Body>
               <Form onSubmit={handleAddSubmit}>
                 <Form.Group className="mb-3">
-                  <Form.Label>اسم الباكدج</Form.Label>
+                  <Form.Label>اسم الخدمة</Form.Label>
                   <Form.Control
                     type="text"
                     name="name"
                     value={formData.name}
                     onChange={handleInputChange}
-                    placeholder="أدخل اسم الباكدج"
+                    placeholder="أدخل اسم الخدمة"
                   />
                 </Form.Group>
                 <Form.Group className="mb-3">
@@ -186,23 +167,6 @@ function PackagesPage() {
                     value={formData.price}
                     onChange={handleInputChange}
                     placeholder="أدخل السعر"
-                  />
-                </Form.Group>
-                <Form.Group className="mb-3">
-                  <Form.Label>النوع</Form.Label>
-                  <Form.Select name="type" value={formData.type} onChange={handleInputChange}>
-                    <option value="makeup">ميك اب</option>
-                    <option value="photo">تصوير</option>
-                  </Form.Select>
-                </Form.Group>
-                <Form.Group className="mb-3">
-                  <Form.Label>الخدمات</Form.Label>
-                  <Select
-                    isMulti
-                    options={services}
-                    value={services.filter(s => formData.services.includes(s.value))}
-                    onChange={handleServicesChange}
-                    placeholder="اختر الخدمات"
                   />
                 </Form.Group>
                 <Button variant="primary" type="submit">
@@ -216,18 +180,18 @@ function PackagesPage() {
           </Modal>
           <Modal show={showEditModal} onHide={() => setShowEditModal(false)}>
             <Modal.Header closeButton>
-              <Modal.Title>تعديل باكدج</Modal.Title>
+              <Modal.Title>تعديل خدمة</Modal.Title>
             </Modal.Header>
             <Modal.Body>
               <Form onSubmit={handleEditSubmit}>
                 <Form.Group className="mb-3">
-                  <Form.Label>اسم الباكدج</Form.Label>
+                  <Form.Label>اسم الخدمة</Form.Label>
                   <Form.Control
                     type="text"
                     name="name"
                     value={editData?.name || ''}
                     onChange={handleInputChange}
-                    placeholder="أدخل اسم الباكدج"
+                    placeholder="أدخل اسم الخدمة"
                   />
                 </Form.Group>
                 <Form.Group className="mb-3">
@@ -238,23 +202,6 @@ function PackagesPage() {
                     value={editData?.price || ''}
                     onChange={handleInputChange}
                     placeholder="أدخل السعر"
-                  />
-                </Form.Group>
-                <Form.Group className="mb-3">
-                  <Form.Label>النوع</Form.Label>
-                  <Form.Select name="type" value={editData?.type || 'makeup'} onChange={handleInputChange}>
-                    <option value="makeup">ميك اب</option>
-                    <option value="photo">تصوير</option>
-                  </Form.Select>
-                </Form.Group>
-                <Form.Group className="mb-3">
-                  <Form.Label>الخدمات</Form.Label>
-                  <Select
-                    isMulti
-                    options={services}
-                    value={services.filter(s => editData?.services.includes(s.value))}
-                    onChange={handleServicesChange}
-                    placeholder="اختر الخدمات"
                   />
                 </Form.Group>
                 <Button variant="primary" type="submit">
@@ -272,4 +219,4 @@ function PackagesPage() {
   );
 }
 
-export default PackagesPage;
+export default PackageServicesPage;

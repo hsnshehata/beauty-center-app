@@ -13,12 +13,10 @@ function ServicePage() {
   const [executions, setExecutions] = useState([]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [showModal, setShowModal] = useState(false);
-  const [formData, setFormData] = useState({
-    serviceId: '',
-    employeeId: '',
-    price: 0,
-  });
+  const [showAddServiceModal, setShowAddServiceModal] = useState(false);
+  const [showExecuteModal, setShowExecuteModal] = useState(false);
+  const [serviceForm, setServiceForm] = useState({ name: '', price: '' });
+  const [executeForm, setExecuteForm] = useState({ serviceId: '', employeeId: '', price: 0 });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -52,17 +50,19 @@ function ServicePage() {
     fetchData();
   }, [navigate]);
 
-  const handleInputChange = (e) => {
+  const handleServiceInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
+    setServiceForm({ ...serviceForm, [name]: value });
   };
 
-  const handleSelectChange = (name, selectedOption) => {
-    setFormData({
-      ...formData,
+  const handleExecuteInputChange = (e) => {
+    const { name, value } = e.target;
+    setExecuteForm({ ...executeForm, [name]: value });
+  };
+
+  const handleExecuteSelectChange = (name, selectedOption) => {
+    setExecuteForm({
+      ...executeForm,
       [name]: selectedOption ? selectedOption.value : '',
       ...(name === 'serviceId' && selectedOption
         ? { price: services.find(s => s.value === selectedOption.value)?.label.match(/\d+/)?.[0] || 0 }
@@ -70,20 +70,41 @@ function ServicePage() {
     });
   };
 
-  const handleSubmit = async (e) => {
+  const handleAddServiceSubmit = async (e) => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:5000/api/services/execute', formData, {
+      await axios.post('http://localhost:5000/api/services', serviceForm, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setSuccess('تم إنشاء الخدمة بنجاح');
+      setServiceForm({ name: '', price: '' });
+      setShowAddServiceModal(false);
+      const response = await axios.get('http://localhost:5000/api/services', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setServices(response.data.map(s => ({ value: s._id, label: `${s.name} (${s.price} جنيه)` })));
+      setTimeout(() => setSuccess(''), 2000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'خطأ في إنشاء الخدمة');
+    }
+  };
+
+  const handleExecuteSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post('http://localhost:5000/api/services/execute', executeForm, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم تسجيل الخدمة المنفذة بنجاح');
-      setFormData({ serviceId: '', employeeId: '', price: 0 });
-      setShowModal(false);
+      setExecuteForm({ serviceId: '', employeeId: '', price: 0 });
+      setShowExecuteModal(false);
       const response = await axios.get('http://localhost:5000/api/services/execute', {
         headers: { Authorization: `Bearer ${token}` },
       });
       setExecutions(response.data);
+      setTimeout(() => setSuccess(''), 2000);
     } catch (err) {
       setError(err.response?.data?.message || 'خطأ في تسجيل الخدمة');
     }
@@ -99,9 +120,13 @@ function ServicePage() {
           <h2>خدمات فورية</h2>
           {error && <Alert variant="danger">{error}</Alert>}
           {success && <Alert variant="success">{success}</Alert>}
-          <Button variant="primary" onClick={() => setShowModal(true)} className="mb-3">
+          <Button variant="primary" onClick={() => setShowAddServiceModal(true)} className="mb-3 me-2">
+            إضافة خدمة جديدة
+          </Button>
+          <Button variant="primary" onClick={() => setShowExecuteModal(true)} className="mb-3">
             تسجيل خدمة منفذة
           </Button>
+          <h4>الخدمات المنفذة</h4>
           <Row>
             {executions.map(execution => (
               <Col md={4} key={execution._id} className="mb-3">
@@ -118,17 +143,52 @@ function ServicePage() {
               </Col>
             ))}
           </Row>
-          <Modal show={showModal} onHide={() => setShowModal(false)}>
+          <Modal show={showAddServiceModal} onHide={() => setShowAddServiceModal(false)}>
+            <Modal.Header closeButton>
+              <Modal.Title>إضافة خدمة فورية</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              <Form onSubmit={handleAddServiceSubmit}>
+                <Form.Group className="mb-3">
+                  <Form.Label>اسم الخدمة</Form.Label>
+                  <Form.Control
+                    type="text"
+                    name="name"
+                    value={serviceForm.name}
+                    onChange={handleServiceInputChange}
+                    placeholder="أدخل اسم الخدمة"
+                  />
+                </Form.Group>
+                <Form.Group className="mb-3">
+                  <Form.Label>السعر</Form.Label>
+                  <Form.Control
+                    type="number"
+                    name="price"
+                    value={serviceForm.price}
+                    onChange={handleServiceInputChange}
+                    placeholder="أدخل السعر"
+                  />
+                </Form.Group>
+                <Button variant="primary" type="submit">
+                  حفظ
+                </Button>
+                <Button variant="secondary" onClick={() => setShowAddServiceModal(false)} className="ms-2">
+                  إلغاء
+                </Button>
+              </Form>
+            </Modal.Body>
+          </Modal>
+          <Modal show={showExecuteModal} onHide={() => setShowExecuteModal(false)}>
             <Modal.Header closeButton>
               <Modal.Title>تسجيل خدمة منفذة</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-              <Form onSubmit={handleSubmit}>
+              <Form onSubmit={handleExecuteSubmit}>
                 <Form.Group className="mb-3">
                   <Form.Label>الخدمة</Form.Label>
                   <Select
                     options={services}
-                    onChange={(option) => handleSelectChange('serviceId', option)}
+                    onChange={(option) => handleExecuteSelectChange('serviceId', option)}
                     placeholder="اختر الخدمة"
                   />
                 </Form.Group>
@@ -136,7 +196,7 @@ function ServicePage() {
                   <Form.Label>الموظف</Form.Label>
                   <Select
                     options={employees}
-                    onChange={(option) => handleSelectChange('employeeId', option)}
+                    onChange={(option) => handleExecuteSelectChange('employeeId', option)}
                     placeholder="اختر الموظف"
                   />
                 </Form.Group>
@@ -145,15 +205,15 @@ function ServicePage() {
                   <Form.Control
                     type="number"
                     name="price"
-                    value={formData.price}
-                    onChange={handleInputChange}
+                    value={executeForm.price}
+                    onChange={handleExecuteInputChange}
                     placeholder="أدخل السعر"
                   />
                 </Form.Group>
                 <Button variant="primary" type="submit">
                   حفظ
                 </Button>
-                <Button variant="secondary" onClick={() => setShowModal(false)} className="ms-2">
+                <Button variant="secondary" onClick={() => setShowExecuteModal(false)} className="ms-2">
                   إلغاء
                 </Button>
               </Form>

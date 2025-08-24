@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Container, Row, Col, Card, Button, Modal, Form, Alert } from 'react-bootstrap';
 import { toast } from 'react-toastify';
+import { QRCodeCanvas } from 'qrcode.react';
 import Select from 'react-select';
 import Sidebar from '../components/Sidebar';
 import '../css/Service.css';
@@ -92,10 +93,10 @@ function ServicePage() {
       toast.success('تم إنشاء الخدمة بنجاح', { toastId: 'services-create' });
       setServiceForm({ name: '', price: '' });
       setShowAddServiceModal(false);
-      const response = await axios.get('http://localhost:5000/api/services', {
+      const servicesRes = await axios.get('http://localhost:5000/api/services', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setServices(response.data.map(s => ({ value: s._id, label: `${s.name} (${s.price} جنيه)` })));
+      setServices(servicesRes.data.map(s => ({ value: s._id, label: `${s.name} (${s.price} جنيه)` })));
       setTimeout(() => setSuccess(''), 2000);
     } catch (err) {
       const errorMessage = err.response?.data?.message || 'خطأ في إنشاء الخدمة';
@@ -115,10 +116,10 @@ function ServicePage() {
       toast.success('تم تسجيل الخدمة المنفذة بنجاح', { toastId: 'services-execute' });
       setExecuteForm({ serviceId: '', employeeId: '', price: 0 });
       setShowExecuteModal(false);
-      const response = await axios.get('http://localhost:5000/api/services/execute', {
+      const executionsRes = await axios.get('http://localhost:5000/api/services/execute', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setExecutions(response.data);
+      setExecutions(executionsRes.data);
       setTimeout(() => setSuccess(''), 2000);
     } catch (err) {
       const errorMessage = err.response?.data?.message || 'خطأ في تسجيل الخدمة';
@@ -153,8 +154,14 @@ function ServicePage() {
                     <Card.Text>
                       الموظف: {execution.employeeId.name}<br />
                       السعر: {execution.price} جنيه<br />
+                      الحالة: {execution.executionStatus === 'pending' ? 'في الانتظار' : execution.executionStatus === 'in_progress' ? 'قيد التنفيذ' : 'نُفذت'}<br />
+                      بواسطة: {execution.executedBy?.username || 'غير محدد'}<br />
                       التاريخ: {new Date(execution.createdAt).toLocaleDateString('ar-EG')}
                     </Card.Text>
+                    <div className="text-center">
+                      <QRCodeCanvas value={execution._id} size={128} />
+                      <p><strong>رقم الوصل:</strong> {execution._id}</p>
+                    </div>
                   </Card.Body>
                 </Card>
               </Col>

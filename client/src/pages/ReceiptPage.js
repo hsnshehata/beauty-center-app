@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Container, Button, Alert } from 'react-bootstrap';
 import { toast } from 'react-toastify';
+import { QRCodeCanvas } from 'qrcode.react';
 import '../css/Receipt.css';
 
 function ReceiptPage() {
@@ -90,6 +91,10 @@ function ReceiptPage() {
         <p><strong>الإجمالي:</strong> {receipt.totalPrice} جنيه</p>
         <p><strong>تم الإنشاء بواسطة:</strong> {receipt.createdBy}</p>
         <p><strong>تاريخ الإنشاء:</strong> {receipt.createdAt}</p>
+        <div className="text-center mt-3">
+          <QRCodeCanvas value={id} size={128} />
+          <p><strong>رقم الوصل:</strong> {id}</p>
+        </div>
         <Button variant="primary" onClick={handlePrint} className="mt-3">
           طباعة
         </Button>

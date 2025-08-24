@@ -18,6 +18,7 @@ import EmployeesPage from './pages/EmployeesPage';
 import ExpensesPage from './pages/ExpensesPage';
 import AdvancesPage from './pages/AdvancesPage';
 import PackageServicesPage from './pages/PackageServicesPage';
+import WorkerDashboard from './pages/WorkerDashboard';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './css/App.css';
 
@@ -43,6 +44,7 @@ function App() {
           <Route path="/expenses" element={<ExpensesPage />} />
           <Route path="/advances" element={<AdvancesPage />} />
           <Route path="/packageServices" element={<PackageServicesPage />} />
+          <Route path="/worker-dashboard" element={<WorkerDashboard />} />
         </Routes>
       </div>
     </Router>

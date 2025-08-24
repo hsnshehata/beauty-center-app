@@ -62,6 +62,18 @@ const bookingSchema = new mongoose.Schema({
   hairStraighteningDate: {
     type: Date,
   },
+  deposit: {
+    type: Number,
+    default: 0,
+  },
+  totalPaid: {
+    type: Number,
+    default: 0,
+  },
+  remainingBalance: {
+    type: Number,
+    default: 0,
+  },
   totalPrice: {
     type: Number,
     required: true,

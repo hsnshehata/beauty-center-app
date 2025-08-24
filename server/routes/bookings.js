@@ -5,6 +5,7 @@ const { authMiddleware, restrictTo } = require('../middleware/authMiddleware');
 const Booking = require('../models/Booking');
 const Package = require('../models/Package');
 const PackageService = require('../models/PackageService');
+const Installment = require('../models/Installment');
 
 router.post('/', authMiddleware, restrictTo('admin', 'supervisor'), async (req, res) => {
   try {
@@ -22,71 +23,109 @@ router.post('/', authMiddleware, restrictTo('admin', 'supervisor'), async (req, 
       hairStraightening,
       hairStraighteningPrice,
       hairStraighteningDate,
+      deposit,
     } = req.body;
 
-    // التحقق من الحقول المطلوبة
     if (!packageId || !clientName || !clientPhone || !city || !eventDate) {
       return res.status(400).json({ message: 'كل الحقول الأساسية مطلوبة' });
     }
 
-    // التحقق من وجود الباكدج الرئيسي
     const package = await Package.findById(packageId).populate('services');
     if (!package) {
       return res.status(400).json({ message: 'الباكدج الرئيسي غير موجود' });
     }
 
-    // حساب الإجمالي
-    let totalPrice = package.price;
+    let totalPrice = parseFloat(package.price) || 0;
 
-    // إضافة باكدج الحنة لو موجود
-    if (hennaPackageId) {
-      const hennaPackage = await Package.findById(hennaPackageId);
+    let hennaPackage = null;
+    if (hennaPackageId && hennaPackageId !== '') {
+      hennaPackage = await Package.findById(hennaPackageId);
       if (!hennaPackage || hennaPackage.type !== 'makeup') {
         return res.status(400).json({ message: 'باكدج الحنة غير صالح' });
       }
-      totalPrice += hennaPackage.price;
+      totalPrice += parseFloat(hennaPackage.price) || 0;
     }
 
-    // إضافة باكدج التصوير لو موجود
-    if (photoPackageId) {
-      const photoPackage = await Package.findById(photoPackageId);
+    let photoPackage = null;
+    if (photoPackageId && photoPackageId !== '') {
+      photoPackage = await Package.findById(photoPackageId);
       if (!photoPackage || photoPackage.type !== 'photo') {
         return res.status(400).json({ message: 'باكدج التصوير غير صالح' });
       }
-      totalPrice += photoPackage.price;
+      totalPrice += parseFloat(photoPackage.price) || 0;
     }
 
-    // خصم المرتجعات لو موجودة
     if (returnedServices && returnedServices.length > 0) {
       for (const returned of returnedServices) {
         const service = await PackageService.findById(returned.serviceId);
         if (!service) {
           return res.status(400).json({ message: `الخدمة المرتجعة ${returned.serviceId} غير موجودة` });
         }
-        // التحقق من إن الخدمة المرتجعة موجودة في الباكدج
         if (!package.services.some(s => s._id.toString() === returned.serviceId)) {
           return res.status(400).json({ message: `الخدمة ${returned.serviceId} غير موجودة في الباكدج المختار` });
         }
-        totalPrice -= parseFloat(returned.price) || service.price;
+        totalPrice -= parseFloat(returned.price) || parseFloat(service.price) || 0;
       }
     }
 
-    // إضافة خدمة إضافية لو موجودة
-    if (additionalService && additionalService.serviceId) {
+    if (additionalService && additionalService.serviceId && additionalService.serviceId !== '') {
       const service = await PackageService.findById(additionalService.serviceId);
       if (!service) {
         return res.status(400).json({ message: 'الخدمة الإضافية غير موجودة' });
       }
-      totalPrice += parseFloat(additionalService.price) || service.price;
+      totalPrice += parseFloat(additionalService.price) || parseFloat(service.price) || 0;
     }
 
-    // إضافة فرد الشعر لو موجود
     if (hairStraightening && hairStraighteningPrice) {
-      totalPrice += parseFloat(hairStraighteningPrice);
+      totalPrice += parseFloat(hairStraighteningPrice) || 0;
     }
 
-    // إنشاء الحجز
+    if (totalPrice < 0) {
+      return res.status(400).json({ message: 'السعر الإجمالي لا يمكن أن يكون سالبًا' });
+    }
+
+    const depositAmount = parseFloat(deposit) || 0;
+    const totalPaid = depositAmount; // في البداية، المدفوع هو العربون بس
+    const remainingBalance = totalPrice - totalPaid;
+
+    if (depositAmount > totalPrice) {
+      return res.status(400).json({ message: 'العربون لا يمكن أن يكون أكبر من الإجمالي' });
+    }
+
     const booking = new Booking({
+      packageId,
+      hennaPackageId: hennaPackageId && hennaPackageId !== '' ? hennaPackageId : null,
+      photoPackageId: photoPackageId && photoPackageId !== '' ? photoPackageId : null,
+      returnedServices: returnedServices || [],
+      additionalService: additionalService && additionalService.serviceId && additionalService.serviceId !== '' ? additionalService : null,
+      clientName,
+      clientPhone,
+      city,
+      eventDate,
+      hennaDate,
+      hairStraightening: !!hairStraightening,
+      hairStraighteningPrice: parseFloat(hairStraighteningPrice) || 0,
+      hairStraighteningDate,
+      deposit: depositAmount,
+      totalPaid,
+      remainingBalance,
+      totalPrice,
+      createdBy: req.user.userId,
+    });
+
+    await booking.save();
+
+    res.status(201).json({ message: 'تم إنشاء الحجز بنجاح', booking });
+  } catch (error) {
+    console.error('خطأ في إنشاء الحجز:', error);
+    res.status(500).json({ message: 'خطأ في السيرفر', error: error.message });
+  }
+});
+
+router.put('/:id', authMiddleware, restrictTo('admin', 'supervisor'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
       packageId,
       hennaPackageId,
       photoPackageId,
@@ -100,20 +139,108 @@ router.post('/', authMiddleware, restrictTo('admin', 'supervisor'), async (req, 
       hairStraightening,
       hairStraighteningPrice,
       hairStraighteningDate,
-      totalPrice,
-      createdBy: req.user.userId,
-    });
+      deposit,
+    } = req.body;
+
+    if (!packageId || !clientName || !clientPhone || !city || !eventDate) {
+      return res.status(400).json({ message: 'كل الحقول الأساسية مطلوبة' });
+    }
+
+    const booking = await Booking.findById(id);
+    if (!booking) {
+      return res.status(404).json({ message: 'الحجز غير موجود' });
+    }
+
+    const package = await Package.findById(packageId).populate('services');
+    if (!package) {
+      return res.status(400).json({ message: 'الباكدج الرئيسي غير موجود' });
+    }
+
+    let totalPrice = parseFloat(package.price) || 0;
+
+    let hennaPackage = null;
+    if (hennaPackageId && hennaPackageId !== '') {
+      hennaPackage = await Package.findById(hennaPackageId);
+      if (!hennaPackage || hennaPackage.type !== 'makeup') {
+        return res.status(400).json({ message: 'باكدج الحنة غير صالح' });
+      }
+      totalPrice += parseFloat(hennaPackage.price) || 0;
+    }
+
+    let photoPackage = null;
+    if (photoPackageId && photoPackageId !== '') {
+      photoPackage = await Package.findById(photoPackageId);
+      if (!photoPackage || photoPackage.type !== 'photo') {
+        return res.status(400).json({ message: 'باكدج التصوير غير صالح' });
+      }
+      totalPrice += parseFloat(photoPackage.price) || 0;
+    }
+
+    if (returnedServices && returnedServices.length > 0) {
+      for (const returned of returnedServices) {
+        const service = await PackageService.findById(returned.serviceId);
+        if (!service) {
+          return res.status(400).json({ message: `الخدمة المرتجعة ${returned.serviceId} غير موجودة` });
+        }
+        if (!package.services.some(s => s._id.toString() === returned.serviceId)) {
+          return res.status(400).json({ message: `الخدمة ${returned.serviceId} غير موجودة في الباكدج المختار` });
+        }
+        totalPrice -= parseFloat(returned.price) || parseFloat(service.price) || 0;
+      }
+    }
+
+    if (additionalService && additionalService.serviceId && additionalService.serviceId !== '') {
+      const service = await PackageService.findById(additionalService.serviceId);
+      if (!service) {
+        return res.status(400).json({ message: 'الخدمة الإضافية غير موجودة' });
+      }
+      totalPrice += parseFloat(additionalService.price) || parseFloat(service.price) || 0;
+    }
+
+    if (hairStraightening && hairStraighteningPrice) {
+      totalPrice += parseFloat(hairStraighteningPrice) || 0;
+    }
+
+    if (totalPrice < 0) {
+      return res.status(400).json({ message: 'السعر الإجمالي لا يمكن أن يكون سالبًا' });
+    }
+
+    const depositAmount = parseFloat(deposit) || 0;
+    const installments = await Installment.find({ bookingId: id });
+    const totalPaid = depositAmount + installments.reduce((sum, inst) => sum + parseFloat(inst.amount || 0), 0);
+    const remainingBalance = totalPrice - totalPaid;
+
+    if (depositAmount > totalPrice) {
+      return res.status(400).json({ message: 'العربون لا يمكن أن يكون أكبر من الإجمالي' });
+    }
+
+    booking.packageId = packageId;
+    booking.hennaPackageId = hennaPackageId && hennaPackageId !== '' ? hennaPackageId : null;
+    booking.photoPackageId = photoPackageId && photoPackageId !== '' ? photoPackageId : null;
+    booking.returnedServices = returnedServices || [];
+    booking.additionalService = additionalService && additionalService.serviceId && additionalService.serviceId !== '' ? additionalService : null;
+    booking.clientName = clientName;
+    booking.clientPhone = clientPhone;
+    booking.city = city;
+    booking.eventDate = eventDate;
+    booking.hennaDate = hennaDate;
+    booking.hairStraightening = !!hairStraightening;
+    booking.hairStraighteningPrice = parseFloat(hairStraighteningPrice) || 0;
+    booking.hairStraighteningDate = hairStraighteningDate;
+    booking.deposit = depositAmount;
+    booking.totalPaid = totalPaid;
+    booking.remainingBalance = remainingBalance;
+    booking.totalPrice = totalPrice;
 
     await booking.save();
 
-    res.status(201).json({ message: 'تم إنشاء الحجز بنجاح', booking });
+    res.json({ message: 'تم تعديل الحجز بنجاح', booking });
   } catch (error) {
-    console.error(error); // لتسجيل الإيرور في الـ server logs
+    console.error('خطأ في تعديل الحجز:', error);
     res.status(500).json({ message: 'خطأ في السيرفر', error: error.message });
   }
 });
 
-// عرض حجوزات اليوم
 router.get('/today', authMiddleware, restrictTo('admin', 'supervisor', 'worker'), async (req, res) => {
   try {
     const today = new Date();
@@ -129,19 +256,19 @@ router.get('/today', authMiddleware, restrictTo('admin', 'supervisor', 'worker')
       ],
     })
       .populate('packageId', 'name price type services')
-      .populate('hennaPackageId', 'name price')
-      .populate('photoPackageId', 'name price')
+      .populate('hennaPackageId', 'name price type')
+      .populate('photoPackageId', 'name price type')
       .populate('returnedServices.serviceId', 'name price')
       .populate('additionalService.serviceId', 'name price')
       .populate('createdBy', 'username');
 
     res.json(bookings);
   } catch (error) {
+    console.error('خطأ في جلب الحجوزات:', error);
     res.status(500).json({ message: 'خطأ في السيرفر', error: error.message });
   }
 });
 
-// عرض كل الحجوزات مع باجينيشن
 router.get('/', authMiddleware, restrictTo('admin', 'supervisor'), async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -153,19 +280,19 @@ router.get('/', authMiddleware, restrictTo('admin', 'supervisor'), async (req, r
       .skip(skip)
       .limit(limit)
       .populate('packageId', 'name price type services')
-      .populate('hennaPackageId', 'name price')
-      .populate('photoPackageId', 'name price')
+      .populate('hennaPackageId', 'name price type')
+      .populate('photoPackageId', 'name price type')
       .populate('returnedServices.serviceId', 'name price')
       .populate('additionalService.serviceId', 'name price')
       .populate('createdBy', 'username');
 
     res.json(bookings);
   } catch (error) {
+    console.error('خطأ في جلب الحجوزات:', error);
     res.status(500).json({ message: 'خطأ في السيرفر', error: error.message });
   }
 });
 
-// البحث في الحجوزات
 router.get('/search', authMiddleware, restrictTo('admin', 'supervisor'), async (req, res) => {
   try {
     const { clientName, clientPhone, eventDate } = req.query;
@@ -189,27 +316,27 @@ router.get('/search', authMiddleware, restrictTo('admin', 'supervisor'), async (
       .sort({ createdAt: -1 })
       .limit(50)
       .populate('packageId', 'name price type services')
-      .populate('hennaPackageId', 'name price')
-      .populate('photoPackageId', 'name price')
+      .populate('hennaPackageId', 'name price type')
+      .populate('photoPackageId', 'name price type')
       .populate('returnedServices.serviceId', 'name price')
       .populate('additionalService.serviceId', 'name price')
       .populate('createdBy', 'username');
 
     res.json(bookings);
   } catch (error) {
+    console.error('خطأ في البحث عن الحجوزات:', error);
     res.status(500).json({ message: 'خطأ في السيرفر', error: error.message });
   }
 });
 
-// جلب بيانات الوصل للطباعة
 router.get('/:id/receipt', authMiddleware, restrictTo('admin', 'supervisor', 'worker'), async (req, res) => {
   try {
     const { id } = req.params;
 
     const booking = await Booking.findById(id)
       .populate('packageId', 'name price type services')
-      .populate('hennaPackageId', 'name price')
-      .populate('photoPackageId', 'name price')
+      .populate('hennaPackageId', 'name price type')
+      .populate('photoPackageId', 'name price type')
       .populate('returnedServices.serviceId', 'name price')
       .populate('additionalService.serviceId', 'name price')
       .populate('createdBy', 'username');
@@ -219,42 +346,73 @@ router.get('/:id/receipt', authMiddleware, restrictTo('admin', 'supervisor', 'wo
     }
 
     const receipt = {
-      clientName: booking.clientName,
-      clientPhone: booking.clientPhone,
-      city: booking.city,
-      eventDate: booking.eventDate.toISOString().split('T')[0],
-      package: {
-        name: booking.packageId.name,
-        price: booking.packageId.price,
-      },
+      clientName: booking.clientName || '',
+      clientPhone: booking.clientPhone || '',
+      city: booking.city || '',
+      eventDate: booking.eventDate ? booking.eventDate.toISOString().split('T')[0] : null,
+      package: booking.packageId ? {
+        _id: booking.packageId._id || '',
+        name: booking.packageId.name || '',
+        price: parseFloat(booking.packageId.price) || 0,
+        type: booking.packageId.type || '',
+      } : null,
       hennaPackage: booking.hennaPackageId ? {
-        name: booking.hennaPackageId.name,
-        price: booking.hennaPackageId.price,
+        _id: booking.hennaPackageId._id || '',
+        name: booking.hennaPackageId.name || '',
+        price: parseFloat(booking.hennaPackageId.price) || 0,
+        type: booking.hennaPackageId.type || '',
         date: booking.hennaDate ? booking.hennaDate.toISOString().split('T')[0] : null,
       } : null,
       photoPackage: booking.photoPackageId ? {
-        name: booking.photoPackageId.name,
-        price: booking.photoPackageId.price,
+        _id: booking.photoPackageId._id || '',
+        name: booking.photoPackageId.name || '',
+        price: parseFloat(booking.photoPackageId.price) || 0,
+        type: booking.photoPackageId.type || '',
       } : null,
-      returnedServices: booking.returnedServices.map(rs => ({
-        name: rs.serviceId.name,
-        price: rs.price,
+      returnedServices: (booking.returnedServices || []).map(rs => ({
+        serviceId: rs.serviceId ? {
+          _id: rs.serviceId._id || '',
+          name: rs.serviceId.name || '',
+          price: parseFloat(rs.serviceId.price) || 0,
+        } : null,
+        price: parseFloat(rs.price) || 0,
       })),
-      additionalService: booking.additionalService?.serviceId ? {
-        name: booking.additionalService.serviceId.name,
-        price: booking.additionalService.price,
+      additionalService: booking.additionalService && booking.additionalService.serviceId ? {
+        serviceId: {
+          _id: booking.additionalService.serviceId._id || '',
+          name: booking.additionalService.serviceId.name || '',
+          price: parseFloat(booking.additionalService.serviceId.price) || 0,
+        },
+        price: parseFloat(booking.additionalService.price) || 0,
       } : null,
-      hairStraightening: booking.hairStraightening ? {
-        price: booking.hairStraighteningPrice,
-        date: booking.hairStraighteningDate ? booking.hairStraighteningDate.toISOString().split('T')[0] : null,
-      } : null,
-      totalPrice: booking.totalPrice,
-      createdBy: booking.createdBy.username,
-      createdAt: booking.createdAt.toISOString().split('T')[0],
+      hairStraightening: !!booking.hairStraightening,
+      hairStraighteningPrice: parseFloat(booking.hairStraighteningPrice) || 0,
+      hairStraighteningDate: booking.hairStraighteningDate ? booking.hairStraighteningDate.toISOString().split('T')[0] : null,
+      deposit: parseFloat(booking.deposit) || 0,
+      totalPaid: parseFloat(booking.totalPaid) || 0,
+      remainingBalance: parseFloat(booking.remainingBalance) || 0,
+      totalPrice: parseFloat(booking.totalPrice) || 0,
+      createdBy: booking.createdBy ? booking.createdBy.username || '' : '',
+      createdAt: booking.createdAt ? booking.createdAt.toISOString().split('T')[0] : null,
     };
 
     res.json(receipt);
   } catch (error) {
+    console.error('خطأ في جلب الوصل:', error);
+    res.status(500).json({ message: 'خطأ في السيرفر', error: error.message });
+  }
+});
+
+router.delete('/:id', authMiddleware, restrictTo('admin', 'supervisor'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const booking = await Booking.findByIdAndDelete(id);
+    if (!booking) {
+      return res.status(404).json({ message: 'الحجز غير موجود' });
+    }
+    res.json({ message: 'تم حذف الحجز بنجاح' });
+  } catch (error) {
+    console.error('خطأ في حذف الحجز:', error);
     res.status(500).json({ message: 'خطأ في السيرفر', error: error.message });
   }
 });

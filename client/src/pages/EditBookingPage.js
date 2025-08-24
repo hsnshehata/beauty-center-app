@@ -5,7 +5,7 @@ import axios from 'axios';
 import { Container, Row, Col, Modal, Form, Button, Alert } from 'react-bootstrap';
 import Select from 'react-select';
 import Sidebar from '../components/Sidebar';
-import '../css/EditBooking.css';
+import '../css/App.css';
 
 function EditBookingPage() {
   const { id } = useParams();
@@ -13,13 +13,12 @@ function EditBookingPage() {
   const [services, setServices] = useState([]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [showModal, setShowModal] = useState(true);
   const [formData, setFormData] = useState({
     packageId: '',
-    hennaPackageId: '',
-    photoPackageId: '',
+    hennaPackageId: null,
+    photoPackageId: null,
     returnedServices: [],
-    additionalService: { serviceId: '', price: 0 },
+    additionalService: { serviceId: null, price: 0 },
     clientName: '',
     clientPhone: '',
     city: '',
@@ -28,6 +27,7 @@ function EditBookingPage() {
     hairStraightening: false,
     hairStraighteningPrice: 0,
     hairStraighteningDate: '',
+    deposit: 0,
   });
   const navigate = useNavigate();
 
@@ -47,35 +47,46 @@ function EditBookingPage() {
           axios.get('http://localhost:5000/api/packages', {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get('http://localhost:5000/api/services', {
+          axios.get('http://localhost:5000/api/packageServices', {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
 
         const booking = bookingRes.data;
         setFormData({
-          packageId: booking.package ? booking.package._id : '',
-          hennaPackageId: booking.hennaPackage ? booking.hennaPackage._id : '',
-          photoPackageId: booking.photoPackage ? booking.photoPackage._id : '',
-          returnedServices: booking.returnedServices.map(rs => ({
-            serviceId: rs.serviceId._id,
-            price: rs.price,
+          packageId: booking.package ? booking.package._id || '' : '',
+          hennaPackageId: booking.hennaPackage ? booking.hennaPackage._id || null : null,
+          photoPackageId: booking.photoPackage ? booking.photoPackage._id || null : null,
+          returnedServices: (booking.returnedServices || []).map(rs => ({
+            serviceId: rs.serviceId ? rs.serviceId._id || null : null,
+            price: parseFloat(rs.price) || 0,
           })),
-          additionalService: booking.additionalService ? {
-            serviceId: booking.additionalService.serviceId._id,
-            price: booking.additionalService.price,
-          } : { serviceId: '', price: 0 },
-          clientName: booking.clientName,
-          clientPhone: booking.clientPhone,
-          city: booking.city,
-          eventDate: booking.eventDate,
-          hennaDate: booking.hennaPackage ? booking.hennaPackage.date : '',
-          hairStraightening: booking.hairStraightening,
-          hairStraighteningPrice: booking.hairStraightening ? booking.hairStraightening.price : 0,
-          hairStraighteningDate: booking.hairStraightening ? booking.hairStraightening.date : '',
+          additionalService: booking.additionalService && booking.additionalService.serviceId ? {
+            serviceId: booking.additionalService.serviceId._id || null,
+            price: parseFloat(booking.additionalService.price) || 0,
+          } : { serviceId: null, price: 0 },
+          clientName: booking.clientName || '',
+          clientPhone: booking.clientPhone || '',
+          city: booking.city || '',
+          eventDate: booking.eventDate || '',
+          hennaDate: booking.hennaPackage ? booking.hennaPackage.date || '' : '',
+          hairStraightening: !!booking.hairStraightening, // تحويل إلى boolean
+          hairStraighteningPrice: parseFloat(booking.hairStraighteningPrice) || 0,
+          hairStraighteningDate: booking.hairStraighteningDate || '',
+          deposit: parseFloat(booking.deposit) || 0,
         });
-        setPackages(packagesRes.data.map(p => ({ value: p._id, label: `${p.name} (${p.price} جنيه)` })));
-        setServices(servicesRes.data.map(s => ({ value: s._id, label: `${s.name} (${s.price} جنيه)` })));
+        setPackages(packagesRes.data.map(p => ({
+          value: p._id,
+          label: `${p.name} (${p.price} جنيه)`,
+          services: p.services || [],
+          price: p.price,
+          type: p.type,
+        })));
+        setServices(servicesRes.data.map(s => ({
+          value: s._id,
+          label: `${s.name} (${s.price} جنيه)`,
+          price: s.price,
+        })));
       } catch (err) {
         setError(err.response?.data?.message || 'خطأ في جلب البيانات');
       }
@@ -95,7 +106,8 @@ function EditBookingPage() {
   const handleSelectChange = (name, selectedOption) => {
     setFormData({
       ...formData,
-      [name]: selectedOption ? selectedOption.value : '',
+      [name]: selectedOption ? selectedOption.value : null,
+      ...(name === 'packageId' ? { returnedServices: [] } : {}),
     });
   };
 
@@ -104,7 +116,7 @@ function EditBookingPage() {
       ...formData,
       returnedServices: selectedOptions.map(option => ({
         serviceId: option.value,
-        price: services.find(s => s.value === option.value)?.label.match(/\d+/)?.[0] || 0,
+        price: parseFloat(services.find(s => s.value === option.value)?.price) || 0,
       })),
     });
   };
@@ -113,8 +125,8 @@ function EditBookingPage() {
     setFormData({
       ...formData,
       additionalService: {
-        serviceId: selectedOption ? selectedOption.value : '',
-        price: selectedOption ? services.find(s => s.value === selectedOption.value)?.label.match(/\d+/)?.[0] || 0 : 0,
+        serviceId: selectedOption ? selectedOption.value : null,
+        price: selectedOption ? parseFloat(services.find(s => s.value === selectedOption.value)?.price) || 0 : 0,
       },
     });
   };
@@ -123,15 +135,65 @@ function EditBookingPage() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`http://localhost:5000/api/bookings/${id}`, formData, {
+      const payload = {
+        ...formData,
+        hennaPackageId: formData.hennaPackageId || null,
+        photoPackageId: formData.photoPackageId || null,
+        additionalService: formData.additionalService.serviceId ? formData.additionalService : null,
+        hairStraightening: !!formData.hairStraightening, // تحويل إلى boolean
+        deposit: parseFloat(formData.deposit) || 0,
+        hairStraighteningPrice: parseFloat(formData.hairStraighteningPrice) || 0,
+      };
+      await axios.put(`http://localhost:5000/api/bookings/${id}`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم تعديل الحجز بنجاح');
       setTimeout(() => navigate('/bookings'), 2000);
     } catch (err) {
       setError(err.response?.data?.message || 'خطأ في تعديل الحجز');
+      console.error('خطأ في الفرونت إند:', err.response?.data);
     }
   };
+
+  const calculateTotalPrice = () => {
+    let totalPrice = 0;
+
+    if (formData.packageId) {
+      const pkg = packages.find(p => p.value === formData.packageId);
+      totalPrice += parseFloat(pkg?.price) || 0;
+    }
+
+    if (formData.hennaPackageId) {
+      const hennaPkg = packages.find(p => p.value === formData.hennaPackageId);
+      totalPrice += parseFloat(hennaPkg?.price) || 0;
+    }
+
+    if (formData.photoPackageId) {
+      const photoPkg = packages.find(p => p.value === formData.photoPackageId);
+      totalPrice += parseFloat(photoPkg?.price) || 0;
+    }
+
+    if (formData.returnedServices.length > 0) {
+      totalPrice -= formData.returnedServices.reduce((sum, rs) => sum + parseFloat(rs.price) || 0, 0);
+    }
+
+    if (formData.additionalService.serviceId) {
+      totalPrice += parseFloat(formData.additionalService.price) || 0;
+    }
+
+    if (formData.hairStraightening && formData.hairStraighteningPrice) {
+      totalPrice += parseFloat(formData.hairStraighteningPrice) || 0;
+    }
+
+    return totalPrice >= 0 ? totalPrice : 0;
+  };
+
+  const totalPrice = calculateTotalPrice();
+  const deposit = parseFloat(formData.deposit) || 0;
+  const remainingBalance = totalPrice - deposit;
+
+  const selectedPackage = packages.find(p => p.value === formData.packageId);
+  const packageServices = selectedPackage ? services.filter(s => selectedPackage.services.some(ps => ps._id === s.value)) : [];
 
   return (
     <Container fluid>
@@ -143,7 +205,7 @@ function EditBookingPage() {
           <h2>تعديل الحجز</h2>
           {error && <Alert variant="danger">{error}</Alert>}
           {success && <Alert variant="success">{success}</Alert>}
-          <Modal show={showModal} onHide={() => navigate('/bookings')}>
+          <Modal show={true} onHide={() => navigate('/bookings')}>
             <Modal.Header closeButton>
               <Modal.Title>تعديل الحجز</Modal.Title>
             </Modal.Header>
@@ -182,10 +244,11 @@ function EditBookingPage() {
                   <Form.Label>مرتجع من الباكدجات (اختياري)</Form.Label>
                   <Select
                     isMulti
-                    options={services}
-                    value={services.filter(s => formData.returnedServices.some(rs => rs.serviceId === s.value))}
+                    options={packageServices}
+                    value={packageServices.filter(s => formData.returnedServices.some(rs => rs.serviceId === s.value))}
                     onChange={handleReturnedServicesChange}
                     placeholder="اختر الخدمات المرتجعة"
+                    isDisabled={!formData.packageId}
                   />
                 </Form.Group>
                 <Form.Group className="mb-3">
@@ -280,6 +343,32 @@ function EditBookingPage() {
                     </Form.Group>
                   </>
                 )}
+                <Form.Group className="mb-3">
+                  <Form.Label>العربون</Form.Label>
+                  <Form.Control
+                    type="number"
+                    name="deposit"
+                    value={formData.deposit}
+                    onChange={handleInputChange}
+                    placeholder="أدخل مبلغ العربون"
+                  />
+                </Form.Group>
+                <Form.Group className="mb-3">
+                  <Form.Label>الإجمالي</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={`${totalPrice} جنيه`}
+                    readOnly
+                  />
+                </Form.Group>
+                <Form.Group className="mb-3">
+                  <Form.Label>الباقي</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={`${remainingBalance} جنيه`}
+                    readOnly
+                  />
+                </Form.Group>
                 <Button variant="primary" type="submit">
                   حفظ
                 </Button>

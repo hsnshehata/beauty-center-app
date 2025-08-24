@@ -1,5 +1,7 @@
 // client/src/App.js
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
 import ReceiptPage from './pages/ReceiptPage';
@@ -23,6 +25,7 @@ function App() {
   return (
     <Router>
       <div className="app">
+        <ToastContainer position="top-left" autoClose={2000} hideProgressBar={false} closeOnClick />
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/" element={<HomePage />} />

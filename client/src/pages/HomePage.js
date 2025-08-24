@@ -1,13 +1,16 @@
 // client/src/pages/HomePage.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Container, Row, Col, Card, Button, Alert } from 'react-bootstrap';
+import { toast } from 'react-toastify';
 import Sidebar from '../components/Sidebar';
+import '../css/App.css';
 
 function HomePage() {
   const [bookings, setBookings] = useState([]);
   const [error, setError] = useState('');
+  const hasFetched = useRef(false); // لمنع تكرار الإشعارات
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -23,8 +26,17 @@ function HomePage() {
           headers: { Authorization: `Bearer ${token}` },
         });
         setBookings(response.data);
+        if (!hasFetched.current) {
+          toast.success('تم جلب حجوزات اليوم بنجاح');
+          hasFetched.current = true;
+        }
       } catch (err) {
-        setError(err.response?.data?.message || 'خطأ في جلب الحجوزات');
+        const errorMessage = err.response?.data?.message || 'خطأ في جلب الحجوزات';
+        setError(errorMessage);
+        if (!hasFetched.current) {
+          toast.error(errorMessage);
+          hasFetched.current = true;
+        }
       }
     };
 
@@ -44,7 +56,7 @@ function HomePage() {
   };
 
   const groupBookings = () => {
-    const makeup = bookings.filter(b => b.packageId.type === 'makeup');
+    const makeup = bookings.filter(b => b.packageId?.type === 'makeup');
     const hair = bookings.filter(b => b.hairStraightening);
     const photo = bookings.filter(b => b.photoPackageId);
     return { makeup, hair, photo };
@@ -69,10 +81,10 @@ function HomePage() {
                   <Card.Body>
                     <Card.Title>{booking.clientName}</Card.Title>
                     <Card.Text>
-                      الهاتف: {booking.clientPhone}<br />
-                      المدينة: {booking.city}<br />
-                      التاريخ: {new Date(booking.eventDate).toLocaleDateString('ar-EG')}<br />
-                      الإجمالي: {booking.totalPrice} جنيه
+                      <strong>الخدمة:</strong> ميك اب - {booking.packageId?.name}<br />
+                      <strong>الإجمالي:</strong> {booking.totalPrice} جنيه<br />
+                      <strong>المدفوع:</strong> {booking.totalPaid} جنيه<br />
+                      <strong>الباقي:</strong> {booking.remainingBalance} جنيه
                     </Card.Text>
                     <Button variant="primary" onClick={() => handleAction(booking._id, 'print')} className="me-2">طباعة</Button>
                     <Button variant="warning" onClick={() => handleAction(booking._id, 'edit')} className="me-2">تعديل</Button>
@@ -91,10 +103,10 @@ function HomePage() {
                   <Card.Body>
                     <Card.Title>{booking.clientName}</Card.Title>
                     <Card.Text>
-                      الهاتف: {booking.clientPhone}<br />
-                      المدينة: {booking.city}<br />
-                      تاريخ الفرد: {booking.hairStraighteningDate ? new Date(booking.hairStraighteningDate).toLocaleDateString('ar-EG') : '-'}<br />
-                      الإجمالي: {booking.totalPrice} جنيه
+                      <strong>الخدمة:</strong> فرد الشعر<br />
+                      <strong>الإجمالي:</strong> {booking.totalPrice} جنيه<br />
+                      <strong>المدفوع:</strong> {booking.totalPaid} جنيه<br />
+                      <strong>الباقي:</strong> {booking.remainingBalance} جنيه
                     </Card.Text>
                     <Button variant="primary" onClick={() => handleAction(booking._id, 'print')} className="me-2">طباعة</Button>
                     <Button variant="warning" onClick={() => handleAction(booking._id, 'edit')} className="me-2">تعديل</Button>
@@ -113,10 +125,10 @@ function HomePage() {
                   <Card.Body>
                     <Card.Title>{booking.clientName}</Card.Title>
                     <Card.Text>
-                      الهاتف: {booking.clientPhone}<br />
-                      المدينة: {booking.city}<br />
-                      التاريخ: {new Date(booking.eventDate).toLocaleDateString('ar-EG')}<br />
-                      الإجمالي: {booking.totalPrice} جنيه
+                      <strong>الخدمة:</strong> تصوير - {booking.photoPackageId?.name}<br />
+                      <strong>الإجمالي:</strong> {booking.totalPrice} جنيه<br />
+                      <strong>المدفوع:</strong> {booking.totalPaid} جنيه<br />
+                      <strong>الباقي:</strong> {booking.remainingBalance} جنيه
                     </Card.Text>
                     <Button variant="primary" onClick={() => handleAction(booking._id, 'print')} className="me-2">طباعة</Button>
                     <Button variant="warning" onClick={() => handleAction(booking._id, 'edit')} className="me-2">تعديل</Button>

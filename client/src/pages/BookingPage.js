@@ -3,9 +3,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Container, Row, Col, Card, Button, Modal, Form, Alert } from 'react-bootstrap';
+import { toast } from 'react-toastify';
 import Select from 'react-select';
 import Sidebar from '../components/Sidebar';
-import '../css/Booking.css';
+import '../css/App.css';
 
 function BookingPage() {
   const [bookings, setBookings] = useState([]);
@@ -18,10 +19,10 @@ function BookingPage() {
   const [search, setSearch] = useState({ clientName: '', clientPhone: '', eventDate: '' });
   const [formData, setFormData] = useState({
     packageId: '',
-    hennaPackageId: '',
-    photoPackageId: '',
+    hennaPackageId: null,
+    photoPackageId: null,
     returnedServices: [],
-    additionalService: { serviceId: '', price: 0 },
+    additionalService: { serviceId: null, price: 0 },
     clientName: '',
     clientPhone: '',
     city: '',
@@ -30,6 +31,7 @@ function BookingPage() {
     hairStraightening: false,
     hairStraighteningPrice: 0,
     hairStraighteningDate: '',
+    deposit: 0,
   });
   const navigate = useNavigate();
 
@@ -54,10 +56,13 @@ function BookingPage() {
           }),
         ]);
         setBookings(bookingsRes.data);
-        setPackages(packagesRes.data.map(p => ({ value: p._id, label: `${p.name} (${p.price} جنيه)`, services: p.services })));
-        setServices(servicesRes.data.map(s => ({ value: s._id, label: `${s.name} (${s.price} جنيه)` })));
+        setPackages(packagesRes.data.map(p => ({ value: p._id, label: `${p.name} (${p.price} جنيه)`, services: p.services, price: p.price, type: p.type })));
+        setServices(servicesRes.data.map(s => ({ value: s._id, label: `${s.name} (${s.price} جنيه)`, price: s.price })));
+        toast.success('تم جلب الحجوزات بنجاح');
       } catch (err) {
-        setError(err.response?.data?.message || 'خطأ في جلب البيانات');
+        const errorMessage = err.response?.data?.message || 'خطأ في جلب البيانات';
+        setError(errorMessage);
+        toast.error(errorMessage);
       }
     };
 
@@ -80,7 +85,7 @@ function BookingPage() {
   const handleSelectChange = (name, selectedOption) => {
     setFormData({
       ...formData,
-      [name]: selectedOption ? selectedOption.value : '',
+      [name]: selectedOption ? selectedOption.value : null,
       ...(name === 'packageId' ? { returnedServices: [] } : {}),
     });
   };
@@ -90,7 +95,7 @@ function BookingPage() {
       ...formData,
       returnedServices: selectedOptions.map(option => ({
         serviceId: option.value,
-        price: parseFloat(services.find(s => s.value === option.value)?.label.match(/\d+/)?.[0]) || 0,
+        price: parseFloat(services.find(s => s.value === option.value)?.price) || 0,
       })),
     });
   };
@@ -99,8 +104,8 @@ function BookingPage() {
     setFormData({
       ...formData,
       additionalService: {
-        serviceId: selectedOption ? selectedOption.value : '',
-        price: selectedOption ? parseFloat(services.find(s => s.value === selectedOption.value)?.label.match(/\d+/)?.[0]) || 0 : 0,
+        serviceId: selectedOption ? selectedOption.value : null,
+        price: selectedOption ? parseFloat(services.find(s => s.value === selectedOption.value)?.price) || 0 : 0,
       },
     });
   };
@@ -109,17 +114,26 @@ function BookingPage() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.post('http://localhost:5000/api/bookings', formData, {
+      const payload = {
+        ...formData,
+        hennaPackageId: formData.hennaPackageId || null,
+        photoPackageId: formData.photoPackageId || null,
+        additionalService: formData.additionalService.serviceId ? formData.additionalService : null,
+        deposit: parseFloat(formData.deposit) || 0,
+        hairStraighteningPrice: parseFloat(formData.hairStraighteningPrice) || 0,
+      };
+      await axios.post('http://localhost:5000/api/bookings', payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم إنشاء الحجز بنجاح');
+      toast.success('تم إنشاء الحجز بنجاح');
       setShowModal(false);
       setFormData({
         packageId: '',
-        hennaPackageId: '',
-        photoPackageId: '',
+        hennaPackageId: null,
+        photoPackageId: null,
         returnedServices: [],
-        additionalService: { serviceId: '', price: 0 },
+        additionalService: { serviceId: null, price: 0 },
         clientName: '',
         clientPhone: '',
         city: '',
@@ -128,6 +142,7 @@ function BookingPage() {
         hairStraightening: false,
         hairStraighteningPrice: 0,
         hairStraighteningDate: '',
+        deposit: 0,
       });
       const bookingsRes = await axios.get(`http://localhost:5000/api/bookings?page=${page}&limit=50`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -135,7 +150,9 @@ function BookingPage() {
       setBookings(bookingsRes.data);
       setTimeout(() => setSuccess(''), 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'خطأ في إضافة الحجز');
+      const errorMessage = err.response?.data?.message || 'خطأ في إضافة الحجز';
+      setError(errorMessage);
+      toast.error(errorMessage);
     }
   };
 
@@ -149,12 +166,68 @@ function BookingPage() {
       });
       setBookings(response.data);
       setPage(1);
+      toast.success('تم البحث بنجاح');
     } catch (err) {
-      setError(err.response?.data?.message || 'خطأ في البحث');
+      const errorMessage = err.response?.data?.message || 'خطأ في البحث';
+      setError(errorMessage);
+      toast.error(errorMessage);
     }
   };
 
-  // جلب خدمات الباكدج المختار فقط
+  const handleDelete = async (id) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`http://localhost:5000/api/bookings/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setSuccess('تم حذف الحجز بنجاح');
+      toast.success('تم حذف الحجز بنجاح');
+      setBookings(bookings.filter(booking => booking._id !== id));
+      setTimeout(() => setSuccess(''), 2000);
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || 'خطأ في حذف الحجز';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    }
+  };
+
+  const calculateTotalPrice = () => {
+    let totalPrice = 0;
+
+    if (formData.packageId) {
+      const pkg = packages.find(p => p.value === formData.packageId);
+      totalPrice += parseFloat(pkg?.price) || 0;
+    }
+
+    if (formData.hennaPackageId) {
+      const hennaPkg = packages.find(p => p.value === formData.hennaPackageId);
+      totalPrice += parseFloat(hennaPkg?.price) || 0;
+    }
+
+    if (formData.photoPackageId) {
+      const photoPkg = packages.find(p => p.value === formData.photoPackageId);
+      totalPrice += parseFloat(photoPkg?.price) || 0;
+    }
+
+    if (formData.returnedServices.length > 0) {
+      totalPrice -= formData.returnedServices.reduce((sum, rs) => sum + parseFloat(rs.price) || 0, 0);
+    }
+
+    if (formData.additionalService.serviceId) {
+      totalPrice += parseFloat(formData.additionalService.price) || 0;
+    }
+
+    if (formData.hairStraightening && formData.hairStraighteningPrice) {
+      totalPrice += parseFloat(formData.hairStraighteningPrice) || 0;
+    }
+
+    return totalPrice >= 0 ? totalPrice : 0;
+  };
+
+  const totalPrice = calculateTotalPrice();
+  const deposit = parseFloat(formData.deposit) || 0;
+  const remainingBalance = totalPrice - deposit;
+
   const selectedPackage = packages.find(p => p.value === formData.packageId);
   const packageServices = selectedPackage ? services.filter(s => selectedPackage.services.some(ps => ps._id === s.value)) : [];
 
@@ -165,12 +238,15 @@ function BookingPage() {
           <Sidebar />
         </Col>
         <Col md={9} className="p-4">
-          <h2>حجز ميك اب</h2>
+          <h2>إدارة الحجوزات</h2>
           {error && <Alert variant="danger">{error}</Alert>}
           {success && <Alert variant="success">{success}</Alert>}
+          <Button variant="primary" onClick={() => setShowModal(true)} className="mb-3">
+            إضافة حجز جديد
+          </Button>
           <Form onSubmit={handleSearch} className="mb-3">
             <Row>
-              <Col md={4}>
+              <Col md={3}>
                 <Form.Group>
                   <Form.Label>اسم العميل</Form.Label>
                   <Form.Control
@@ -182,7 +258,7 @@ function BookingPage() {
                   />
                 </Form.Group>
               </Col>
-              <Col md={4}>
+              <Col md={3}>
                 <Form.Group>
                   <Form.Label>رقم الهاتف</Form.Label>
                   <Form.Control
@@ -194,7 +270,7 @@ function BookingPage() {
                   />
                 </Form.Group>
               </Col>
-              <Col md={4}>
+              <Col md={3}>
                 <Form.Group>
                   <Form.Label>تاريخ الحدث</Form.Label>
                   <Form.Control
@@ -205,14 +281,13 @@ function BookingPage() {
                   />
                 </Form.Group>
               </Col>
+              <Col md={3} className="d-flex align-items-end">
+                <Button variant="primary" type="submit">
+                  بحث
+                </Button>
+              </Col>
             </Row>
-            <Button variant="secondary" type="submit" className="mt-3">
-              بحث
-            </Button>
           </Form>
-          <Button variant="primary" onClick={() => setShowModal(true)} className="mb-3">
-            حجز جديد
-          </Button>
           <Row>
             {bookings.map(booking => (
               <Col md={4} key={booking._id} className="mb-3">
@@ -220,10 +295,10 @@ function BookingPage() {
                   <Card.Body>
                     <Card.Title>{booking.clientName}</Card.Title>
                     <Card.Text>
-                      الهاتف: {booking.clientPhone}<br />
-                      المدينة: {booking.city}<br />
-                      التاريخ: {new Date(booking.eventDate).toLocaleDateString('ar-EG')}<br />
-                      الإجمالي: {booking.totalPrice} جنيه
+                      <strong>الخدمة:</strong> {booking.packageId?.type === 'makeup' ? `ميك اب - ${booking.packageId?.name}` : booking.hairStraightening ? 'فرد الشعر' : `تصوير - ${booking.photoPackageId?.name}`}<br />
+                      <strong>الإجمالي:</strong> {booking.totalPrice} جنيه<br />
+                      <strong>المدفوع:</strong> {booking.totalPaid} جنيه<br />
+                      <strong>الباقي:</strong> {booking.remainingBalance} جنيه
                     </Card.Text>
                     <Button variant="primary" onClick={() => window.open(`/receipt/${booking._id}`, '_blank')} className="me-2">
                       طباعة
@@ -234,21 +309,25 @@ function BookingPage() {
                     <Button variant="info" onClick={() => navigate(`/booking/${booking._id}`)} className="me-2">
                       تفاصيل
                     </Button>
-                    <Button variant="success" onClick={() => navigate(`/installment/${booking._id}`)}>
+                    <Button variant="success" onClick={() => navigate(`/installment/${booking._id}`)} className="me-2">
                       إضافة قسط
+                    </Button>
+                    <Button variant="danger" onClick={() => handleDelete(booking._id)}>
+                      حذف
                     </Button>
                   </Card.Body>
                 </Card>
               </Col>
             ))}
           </Row>
-          <Button variant="outline-primary" onClick={() => setPage(page - 1)} disabled={page === 1} className="me-2">
-            الصفحة السابقة
-          </Button>
-          <Button variant="outline-primary" onClick={() => setPage(page + 1)}>
-            الصفحة التالية
-          </Button>
-
+          <div className="d-flex justify-content-between mt-3">
+            <Button disabled={page === 1} onClick={() => setPage(page - 1)}>
+              الصفحة السابقة
+            </Button>
+            <Button onClick={() => setPage(page + 1)}>
+              الصفحة التالية
+            </Button>
+          </div>
           <Modal show={showModal} onHide={() => setShowModal(false)}>
             <Modal.Header closeButton>
               <Modal.Title>إضافة حجز جديد</Modal.Title>
@@ -387,6 +466,32 @@ function BookingPage() {
                     </Form.Group>
                   </>
                 )}
+                <Form.Group className="mb-3">
+                  <Form.Label>العربون</Form.Label>
+                  <Form.Control
+                    type="number"
+                    name="deposit"
+                    value={formData.deposit}
+                    onChange={handleInputChange}
+                    placeholder="أدخل مبلغ العربون"
+                  />
+                </Form.Group>
+                <Form.Group className="mb-3">
+                  <Form.Label>الإجمالي</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={`${totalPrice} جنيه`}
+                    readOnly
+                  />
+                </Form.Group>
+                <Form.Group className="mb-3">
+                  <Form.Label>الباقي</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={`${remainingBalance} جنيه`}
+                    readOnly
+                  />
+                </Form.Group>
                 <Button variant="primary" type="submit">
                   حفظ
                 </Button>

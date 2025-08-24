@@ -3,12 +3,14 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Container, Row, Col, Form, Button, Alert } from 'react-bootstrap';
+import { toast } from 'react-toastify';
 import Sidebar from '../components/Sidebar';
-import '../css/Installment.css';
+import '../css/App.css';
 
 function InstallmentPage() {
   const { id } = useParams();
   const [amount, setAmount] = useState('');
+  const [booking, setBooking] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const navigate = useNavigate();
@@ -17,8 +19,24 @@ function InstallmentPage() {
     const token = localStorage.getItem('token');
     if (!token) {
       navigate('/login');
+      return;
     }
-  }, [navigate]);
+
+    const fetchBooking = async () => {
+      try {
+        const response = await axios.get(`http://localhost:5000/api/bookings/${id}/receipt`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setBooking(response.data);
+      } catch (err) {
+        const errorMessage = err.response?.data?.message || 'خطأ في جلب تفاصيل الحجز';
+        setError(errorMessage);
+        toast.error(errorMessage);
+      }
+    };
+
+    fetchBooking();
+  }, [id, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -26,15 +44,18 @@ function InstallmentPage() {
       const token = localStorage.getItem('token');
       await axios.post('http://localhost:5000/api/installments', {
         bookingId: id,
-        amount,
+        amount: parseFloat(amount),
       }, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم إضافة القسط بنجاح');
+      toast.success('تم إضافة القسط بنجاح');
       setAmount('');
       setTimeout(() => navigate('/bookings'), 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'خطأ في إضافة القسط');
+      const errorMessage = err.response?.data?.message || 'خطأ في إضافة القسط';
+      setError(errorMessage);
+      toast.error(errorMessage);
     }
   };
 
@@ -48,6 +69,14 @@ function InstallmentPage() {
           <h2>إضافة قسط</h2>
           {error && <Alert variant="danger">{error}</Alert>}
           {success && <Alert variant="success">{success}</Alert>}
+          {booking && (
+            <div className="mb-3">
+              <p><strong>اسم العميل:</strong> {booking.clientName}</p>
+              <p><strong>الإجمالي:</strong> {booking.totalPrice} جنيه</p>
+              <p><strong>المدفوع:</strong> {booking.totalPaid} جنيه</p>
+              <p><strong>الباقي:</strong> {booking.remainingBalance} جنيه</p>
+            </div>
+          )}
           <Form onSubmit={handleSubmit}>
             <Form.Group className="mb-3">
               <Form.Label>مبلغ القسط</Form.Label>

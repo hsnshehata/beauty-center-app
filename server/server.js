@@ -12,6 +12,7 @@ const advanceRoutes = require('./routes/advances');
 const reportRoutes = require('./routes/reports');
 const installmentRoutes = require('./routes/installments');
 const packageServiceRoutes = require('./routes/packageServices');
+const workerPointsRoutes = require('./routes/workerPoints');
 const app = express();
 const port = 5000;
 
@@ -32,6 +33,7 @@ app.use('/api/advances', advanceRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/installments', installmentRoutes);
 app.use('/api/packageServices', packageServiceRoutes);
+app.use('/api/worker-points', workerPointsRoutes);
 
 app.get('/', (req, res) => {
   res.send('سيرفر الباك إند شغال، وMongoDB Atlas متصل! 🚀');

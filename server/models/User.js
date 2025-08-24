@@ -18,6 +18,10 @@ const userSchema = new mongoose.Schema({
     required: true,
     enum: ['admin', 'supervisor', 'worker'],
   },
+  points: {
+    type: Number,
+    default: 0,
+  },
   createdAt: {
     type: Date,
     default: Date.now,

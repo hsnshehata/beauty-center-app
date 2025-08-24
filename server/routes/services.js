@@ -5,6 +5,8 @@ const { authMiddleware, restrictTo } = require('../middleware/authMiddleware');
 const Service = require('../models/Service');
 const ServiceExecution = require('../models/ServiceExecution');
 const Employee = require('../models/Employee');
+const User = require('../models/User');
+const WorkerPoints = require('../models/WorkerPoints');
 
 // إضافة خدمة فورية جديدة (للأدمن بس)
 router.post('/', authMiddleware, restrictTo('admin'), async (req, res) => {
@@ -68,13 +70,35 @@ router.post('/execute', authMiddleware, restrictTo('admin', 'supervisor'), async
 });
 
 // عرض كل الخدمات المنفذة
-router.get('/execute', authMiddleware, restrictTo('admin', 'supervisor'), async (req, res) => {
+router.get('/execute', authMiddleware, restrictTo('admin', 'supervisor', 'worker'), async (req, res) => {
   try {
     const executions = await ServiceExecution.find()
       .populate('serviceId', 'name price')
       .populate('employeeId', 'name')
-      .populate('createdBy', 'username');
+      .populate('createdBy', 'username')
+      .populate('executedBy', 'username');
     res.json(executions);
+  } catch (error) {
+    res.status(500).json({ message: 'خطأ في السيرفر', error: error.message });
+  }
+});
+
+// تنفيذ خدمة فورية
+router.post('/execute/:id', authMiddleware, restrictTo('worker'), async (req, res) => {
+  try {
+    const execution = await ServiceExecution.findById(req.params.id);
+    if (!execution) {
+      return res.status(404).json({ message: 'الخدمة غير موجودة' });
+    }
+    if (execution.executionStatus !== 'pending') {
+      return res.status(400).json({ message: 'الخدمة تم تنفيذها أو قيد التنفيذ' });
+    }
+
+    execution.executionStatus = 'in_progress';
+    execution.executedBy = req.user.userId;
+    await execution.save();
+
+    res.json({ message: 'تم بدء تنفيذ الخدمة' });
   } catch (error) {
     res.status(500).json({ message: 'خطأ في السيرفر', error: error.message });
   }

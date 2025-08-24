@@ -16,6 +16,15 @@ const serviceExecutionSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  executionStatus: {
+    type: String,
+    enum: ['pending', 'in_progress', 'completed'],
+    default: 'pending',
+  },
+  executedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

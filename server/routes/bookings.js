@@ -6,6 +6,8 @@ const Booking = require('../models/Booking');
 const Package = require('../models/Package');
 const PackageService = require('../models/PackageService');
 const Installment = require('../models/Installment');
+const User = require('../models/User');
+const WorkerPoints = require('../models/WorkerPoints');
 
 router.post('/', authMiddleware, restrictTo('admin', 'supervisor'), async (req, res) => {
   try {
@@ -85,7 +87,7 @@ router.post('/', authMiddleware, restrictTo('admin', 'supervisor'), async (req, 
     }
 
     const depositAmount = parseFloat(deposit) || 0;
-    const totalPaid = depositAmount; // في البداية، المدفوع هو العربون بس
+    const totalPaid = depositAmount;
     const remainingBalance = totalPrice - totalPaid;
 
     if (depositAmount > totalPrice) {
@@ -339,7 +341,13 @@ router.get('/:id/receipt', authMiddleware, restrictTo('admin', 'supervisor', 'wo
       .populate('photoPackageId', 'name price type')
       .populate('returnedServices.serviceId', 'name price')
       .populate('additionalService.serviceId', 'name price')
-      .populate('createdBy', 'username');
+      .populate('createdBy', 'username')
+      .populate('packageExecutedBy', 'username')
+      .populate('hennaPackageExecutedBy', 'username')
+      .populate('photoPackageExecutedBy', 'username')
+      .populate('additionalService.executedBy', 'username')
+      .populate('hairStraighteningExecutedBy', 'username')
+      .populate('returnedServices.executedBy', 'username');
 
     if (!booking) {
       return res.status(404).json({ message: 'الحجز غير موجود' });
@@ -376,6 +384,8 @@ router.get('/:id/receipt', authMiddleware, restrictTo('admin', 'supervisor', 'wo
           price: parseFloat(rs.serviceId.price) || 0,
         } : null,
         price: parseFloat(rs.price) || 0,
+        status: rs.status || 'pending',
+        executedBy: rs.executedBy ? { username: rs.executedBy.username || '' } : null,
       })),
       additionalService: booking.additionalService && booking.additionalService.serviceId ? {
         serviceId: {
@@ -384,10 +394,14 @@ router.get('/:id/receipt', authMiddleware, restrictTo('admin', 'supervisor', 'wo
           price: parseFloat(booking.additionalService.serviceId.price) || 0,
         },
         price: parseFloat(booking.additionalService.price) || 0,
+        status: booking.additionalService.status || 'pending',
+        executedBy: booking.additionalService.executedBy ? { username: booking.additionalService.executedBy.username || '' } : null,
       } : null,
       hairStraightening: !!booking.hairStraightening,
       hairStraighteningPrice: parseFloat(booking.hairStraighteningPrice) || 0,
       hairStraighteningDate: booking.hairStraighteningDate ? booking.hairStraighteningDate.toISOString().split('T')[0] : null,
+      hairStraighteningStatus: booking.hairStraighteningStatus || 'pending',
+      hairStraighteningExecutedBy: booking.hairStraighteningExecutedBy ? { username: booking.hairStraighteningExecutedBy.username || '' } : null,
       deposit: parseFloat(booking.deposit) || 0,
       totalPaid: parseFloat(booking.totalPaid) || 0,
       remainingBalance: parseFloat(booking.remainingBalance) || 0,
@@ -413,6 +427,160 @@ router.delete('/:id', authMiddleware, restrictTo('admin', 'supervisor'), async (
     res.json({ message: 'تم حذف الحجز بنجاح' });
   } catch (error) {
     console.error('خطأ في حذف الحجز:', error);
+    res.status(500).json({ message: 'خطأ في السيرفر', error: error.message });
+  }
+});
+
+// تنفيذ خدمة في الحجز
+router.post('/:id/execute', authMiddleware, restrictTo('worker'), async (req, res) => {
+  try {
+    const { serviceType, serviceIndex } = req.body; // serviceType: 'package', 'hennaPackage', 'photoPackage', 'additionalService', 'hairStraightening', 'returnedService'
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ message: 'الحجز غير موجود' });
+    }
+
+    let price = 0;
+    if (serviceType === 'package') {
+      if (booking.packageStatus !== 'pending') {
+        return res.status(400).json({ message: 'الخدمة تم تنفيذها أو قيد التنفيذ' });
+      }
+      booking.packageStatus = 'in_progress';
+      booking.packageExecutedBy = req.user.userId;
+      price = booking.packageId.price;
+    } else if (serviceType === 'hennaPackage') {
+      if (!booking.hennaPackageId || booking.hennaPackageStatus !== 'pending') {
+        return res.status(400).json({ message: 'الخدمة غير موجودة أو تم تنفيذها' });
+      }
+      booking.hennaPackageStatus = 'in_progress';
+      booking.hennaPackageExecutedBy = req.user.userId;
+      price = booking.hennaPackageId.price;
+    } else if (serviceType === 'photoPackage') {
+      if (!booking.photoPackageId || booking.photoPackageStatus !== 'pending') {
+        return res.status(400).json({ message: 'الخدمة غير موجودة أو تم تنفيذها' });
+      }
+      booking.photoPackageStatus = 'in_progress';
+      booking.photoPackageExecutedBy = req.user.userId;
+      price = booking.photoPackageId.price;
+    } else if (serviceType === 'additionalService') {
+      if (!booking.additionalService || booking.additionalService.status !== 'pending') {
+        return res.status(400).json({ message: 'الخدمة غير موجودة أو تم تنفيذها' });
+      }
+      booking.additionalService.status = 'in_progress';
+      booking.additionalService.executedBy = req.user.userId;
+      price = booking.additionalService.price;
+    } else if (serviceType === 'hairStraightening') {
+      if (!booking.hairStraightening || booking.hairStraighteningStatus !== 'pending') {
+        return res.status(400).json({ message: 'الخدمة غير موجودة أو تم تنفيذها' });
+      }
+      booking.hairStraighteningStatus = 'in_progress';
+      booking.hairStraighteningExecutedBy = req.user.userId;
+      price = booking.hairStraighteningPrice;
+    } else if (serviceType === 'returnedService') {
+      if (!booking.returnedServices[serviceIndex] || booking.returnedServices[serviceIndex].status !== 'pending') {
+        return res.status(400).json({ message: 'الخدمة غير موجودة أو تم تنفيذها' });
+      }
+      booking.returnedServices[serviceIndex].status = 'in_progress';
+      booking.returnedServices[serviceIndex].executedBy = req.user.userId;
+      price = booking.returnedServices[serviceIndex].price;
+    } else {
+      return res.status(400).json({ message: 'نوع الخدمة غير صالح' });
+    }
+
+    await booking.save();
+    res.json({ message: 'تم بدء تنفيذ الخدمة' });
+  } catch (error) {
+    res.status(500).json({ message: 'خطأ في السيرفر', error: error.message });
+  }
+});
+
+// جلب خدمات الحجز
+router.get('/:id/services', authMiddleware, restrictTo('worker'), async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id)
+      .populate('packageId', 'name price')
+      .populate('hennaPackageId', 'name price')
+      .populate('photoPackageId', 'name price')
+      .populate('returnedServices.serviceId', 'name')
+      .populate('additionalService.serviceId', 'name')
+      .populate('packageExecutedBy', 'username')
+      .populate('hennaPackageExecutedBy', 'username')
+      .populate('photoPackageExecutedBy', 'username')
+      .populate('additionalService.executedBy', 'username')
+      .populate('hairStraighteningExecutedBy', 'username')
+      .populate('returnedServices.executedBy', 'username');
+
+    if (!booking) {
+      return res.status(404).json({ message: 'الحجز غير موجود' });
+    }
+
+    const services = [];
+    if (booking.packageId) {
+      services.push({
+        type: 'package',
+        name: booking.packageId.name,
+        price: booking.packageId.price,
+        status: booking.packageStatus,
+        executedBy: booking.packageExecutedBy,
+        bookingId: booking._id,
+      });
+    }
+    if (booking.hennaPackageId) {
+      services.push({
+        type: 'hennaPackage',
+        name: booking.hennaPackageId.name,
+        price: booking.hennaPackageId.price,
+        status: booking.hennaPackageStatus,
+        executedBy: booking.hennaPackageExecutedBy,
+        bookingId: booking._id,
+      });
+    }
+    if (booking.photoPackageId) {
+      services.push({
+        type: 'photoPackage',
+        name: booking.photoPackageId.name,
+        price: booking.photoPackageId.price,
+        status: booking.photoPackageStatus,
+        executedBy: booking.photoPackageExecutedBy,
+        bookingId: booking._id,
+      });
+    }
+    if (booking.additionalService && booking.additionalService.serviceId) {
+      services.push({
+        type: 'additionalService',
+        name: booking.additionalService.serviceId.name,
+        price: booking.additionalService.price,
+        status: booking.additionalService.status,
+        executedBy: booking.additionalService.executedBy,
+        bookingId: booking._id,
+      });
+    }
+    if (booking.hairStraightening) {
+      services.push({
+        type: 'hairStraightening',
+        name: 'فرد الشعر',
+        price: booking.hairStraighteningPrice,
+        status: booking.hairStraighteningStatus,
+        executedBy: booking.hairStraighteningExecutedBy,
+        bookingId: booking._id,
+      });
+    }
+    booking.returnedServices.forEach((rs, index) => {
+      if (rs.serviceId) {
+        services.push({
+          type: 'returnedService',
+          index,
+          name: rs.serviceId.name,
+          price: rs.price,
+          status: rs.status,
+          executedBy: rs.executedBy,
+          bookingId: booking._id,
+        });
+      }
+    });
+
+    res.json(services);
+  } catch (error) {
     res.status(500).json({ message: 'خطأ في السيرفر', error: error.message });
   }
 });

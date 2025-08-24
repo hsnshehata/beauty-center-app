@@ -1,8 +1,9 @@
 // client/src/pages/PackageServicesPage.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Container, Row, Col, Form, Button, Alert, Card, Modal } from 'react-bootstrap';
+import { toast } from 'react-toastify';
 import Sidebar from '../components/Sidebar';
 import '../css/PackageServices.css';
 
@@ -17,6 +18,7 @@ function PackageServicesPage() {
   const [success, setSuccess] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const hasFetched = useRef(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -32,8 +34,17 @@ function PackageServicesPage() {
           headers: { Authorization: `Bearer ${token}` },
         });
         setServices(response.data);
+        if (!hasFetched.current) {
+          toast.success('تم جلب الخدمات بنجاح', { toastId: 'package-services-fetch' });
+          hasFetched.current = true;
+        }
       } catch (err) {
-        setError(err.response?.data?.message || 'خطأ في جلب الخدمات');
+        const errorMessage = err.response?.data?.message || 'خطأ في جلب الخدمات';
+        setError(errorMessage);
+        if (!hasFetched.current) {
+          toast.error(errorMessage, { toastId: 'package-services-fetch-error' });
+          hasFetched.current = true;
+        }
       }
     };
 
@@ -54,6 +65,7 @@ function PackageServicesPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم إنشاء الخدمة بنجاح');
+      toast.success('تم إنشاء الخدمة بنجاح', { toastId: 'package-services-create' });
       setFormData({ name: '', price: '' });
       setShowAddModal(false);
       const response = await axios.get('http://localhost:5000/api/packageServices', {
@@ -62,7 +74,9 @@ function PackageServicesPage() {
       setServices(response.data);
       setTimeout(() => setSuccess(''), 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'خطأ في إنشاء الخدمة');
+      const errorMessage = err.response?.data?.message || 'خطأ في إنشاء الخدمة';
+      setError(errorMessage);
+      toast.error(errorMessage, { toastId: 'package-services-create-error' });
     }
   };
 
@@ -74,6 +88,7 @@ function PackageServicesPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم تعديل الخدمة بنجاح');
+      toast.success('تم تعديل الخدمة بنجاح', { toastId: `package-services-update-${editData._id}` });
       setEditData(null);
       setShowEditModal(false);
       const response = await axios.get('http://localhost:5000/api/packageServices', {
@@ -82,7 +97,9 @@ function PackageServicesPage() {
       setServices(response.data);
       setTimeout(() => setSuccess(''), 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'خطأ في تعديل الخدمة');
+      const errorMessage = err.response?.data?.message || 'خطأ في تعديل الخدمة';
+      setError(errorMessage);
+      toast.error(errorMessage, { toastId: `package-services-update-error-${editData._id}` });
     }
   };
 
@@ -102,10 +119,13 @@ function PackageServicesPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم حذف الخدمة بنجاح');
+      toast.success('تم حذف الخدمة بنجاح', { toastId: `package-services-delete-${id}` });
       setServices(services.filter(s => s._id !== id));
       setTimeout(() => setSuccess(''), 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'خطأ في حذف الخدمة');
+      const errorMessage = err.response?.data?.message || 'خطأ في حذف الخدمة';
+      setError(errorMessage);
+      toast.error(errorMessage, { toastId: `package-services-delete-error-${id}` });
     }
   };
 

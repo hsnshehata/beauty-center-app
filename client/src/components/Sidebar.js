@@ -35,7 +35,7 @@ function Sidebar() {
           ) : (
             <>
               <Nav.Link href="/">الصفحة الرئيسية</Nav.Link>
-              <Nav.Link href="/bookings">حجز ميك اب</Nav.Link>
+              <Nav.Link href="/bookings">إدارة الحجوزات</Nav.Link>
               <Nav.Link href="/services">خدمات فورية</Nav.Link>
               <Nav.Link href="/expenses">المصروفات</Nav.Link>
               <Nav.Link href="/advances">سلف الموظفين</Nav.Link>

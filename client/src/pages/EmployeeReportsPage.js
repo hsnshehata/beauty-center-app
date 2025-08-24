@@ -1,8 +1,9 @@
 // client/src/pages/EmployeeReportsPage.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Container, Row, Col, Form, Button, Alert, Card } from 'react-bootstrap';
+import { toast } from 'react-toastify';
 import Select from 'react-select';
 import Sidebar from '../components/Sidebar';
 import '../css/EmployeeReports.css';
@@ -16,6 +17,8 @@ function EmployeeReportsPage() {
   });
   const [report, setReport] = useState(null);
   const [error, setError] = useState('');
+  const hasFetchedEmployees = useRef(false);
+  const hasFetchedReport = useRef(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -31,8 +34,17 @@ function EmployeeReportsPage() {
           headers: { Authorization: `Bearer ${token}` },
         });
         setEmployees(response.data.map(e => ({ value: e._id, label: e.name })));
+        if (!hasFetchedEmployees.current) {
+          toast.success('تم جلب الموظفين بنجاح', { toastId: 'employee-report-fetch-employees' });
+          hasFetchedEmployees.current = true;
+        }
       } catch (err) {
-        setError(err.response?.data?.message || 'خطأ في جلب الموظفين');
+        const errorMessage = err.response?.data?.message || 'خطأ في جلب الموظفين';
+        setError(errorMessage);
+        if (!hasFetchedEmployees.current) {
+          toast.error(errorMessage, { toastId: 'employee-report-error-employees' });
+          hasFetchedEmployees.current = true;
+        }
       }
     };
 
@@ -57,8 +69,12 @@ function EmployeeReportsPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setReport(response.data);
+      toast.success('تم جلب التقرير بنجاح', { toastId: 'employee-report-fetch-report' });
+      hasFetchedReport.current = true;
     } catch (err) {
-      setError(err.response?.data?.message || 'خطأ في جلب التقرير');
+      const errorMessage = err.response?.data?.message || 'خطأ في جلب التقرير';
+      setError(errorMessage);
+      toast.error(errorMessage, { toastId: 'employee-report-error-report' });
     }
   };
 

@@ -1,14 +1,16 @@
 // client/src/pages/DailyReportsPage.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Container, Row, Col, Card, Alert } from 'react-bootstrap';
+import { toast } from 'react-toastify';
 import Sidebar from '../components/Sidebar';
 import '../css/DailyReports.css';
 
 function DailyReportsPage() {
   const [report, setReport] = useState(null);
   const [error, setError] = useState('');
+  const hasFetched = useRef(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,8 +26,17 @@ function DailyReportsPage() {
           headers: { Authorization: `Bearer ${token}` },
         });
         setReport(response.data);
+        if (!hasFetched.current) {
+          toast.success('تم جلب التقرير اليومي بنجاح', { toastId: 'daily-report-fetch' });
+          hasFetched.current = true;
+        }
       } catch (err) {
-        setError(err.response?.data?.message || 'خطأ في جلب التقرير');
+        const errorMessage = err.response?.data?.message || 'خطأ في جلب التقرير';
+        setError(errorMessage);
+        if (!hasFetched.current) {
+          toast.error(errorMessage, { toastId: 'daily-report-error' });
+          hasFetched.current = true;
+        }
       }
     };
 

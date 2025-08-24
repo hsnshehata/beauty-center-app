@@ -1,8 +1,9 @@
 // client/src/pages/ExpensesPage.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Container, Row, Col, Form, Button, Alert, Card } from 'react-bootstrap';
+import { toast } from 'react-toastify';
 import Sidebar from '../components/Sidebar';
 import '../css/Expenses.css';
 
@@ -14,6 +15,7 @@ function ExpensesPage() {
   const [expenses, setExpenses] = useState([]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const hasFetched = useRef(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,8 +31,17 @@ function ExpensesPage() {
           headers: { Authorization: `Bearer ${token}` },
         });
         setExpenses(response.data);
+        if (!hasFetched.current) {
+          toast.success('تم جلب المصروفات بنجاح', { toastId: 'expenses-fetch' });
+          hasFetched.current = true;
+        }
       } catch (err) {
-        setError(err.response?.data?.message || 'خطأ في جلب المصروفات');
+        const errorMessage = err.response?.data?.message || 'خطأ في جلب المصروفات';
+        setError(errorMessage);
+        if (!hasFetched.current) {
+          toast.error(errorMessage, { toastId: 'expenses-fetch-error' });
+          hasFetched.current = true;
+        }
       }
     };
 
@@ -50,6 +61,7 @@ function ExpensesPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم إنشاء المصروف بنجاح');
+      toast.success('تم إنشاء المصروف بنجاح', { toastId: 'expenses-create' });
       setFormData({ details: '', amount: '' });
       const response = await axios.get('http://localhost:5000/api/expenses', {
         headers: { Authorization: `Bearer ${token}` },
@@ -57,7 +69,9 @@ function ExpensesPage() {
       setExpenses(response.data);
       setTimeout(() => setSuccess(''), 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'خطأ في إنشاء المصروف');
+      const errorMessage = err.response?.data?.message || 'خطأ في إنشاء المصروف';
+      setError(errorMessage);
+      toast.error(errorMessage, { toastId: 'expenses-create-error' });
     }
   };
 

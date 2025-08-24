@@ -1,5 +1,5 @@
 // client/src/pages/BookingPage.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Container, Row, Col, Card, Button, Modal, Form, Alert } from 'react-bootstrap';
@@ -33,6 +33,7 @@ function BookingPage() {
     hairStraighteningDate: '',
     deposit: 0,
   });
+  const hasFetched = useRef(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -58,11 +59,17 @@ function BookingPage() {
         setBookings(bookingsRes.data);
         setPackages(packagesRes.data.map(p => ({ value: p._id, label: `${p.name} (${p.price} جنيه)`, services: p.services, price: p.price, type: p.type })));
         setServices(servicesRes.data.map(s => ({ value: s._id, label: `${s.name} (${s.price} جنيه)`, price: s.price })));
-        toast.success('تم جلب الحجوزات بنجاح');
+        if (!hasFetched.current) {
+          toast.success('تم جلب الحجوزات بنجاح', { toastId: 'booking-page-fetch' });
+          hasFetched.current = true;
+        }
       } catch (err) {
         const errorMessage = err.response?.data?.message || 'خطأ في جلب البيانات';
         setError(errorMessage);
-        toast.error(errorMessage);
+        if (!hasFetched.current) {
+          toast.error(errorMessage, { toastId: 'booking-page-error' });
+          hasFetched.current = true;
+        }
       }
     };
 
@@ -126,7 +133,7 @@ function BookingPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم إنشاء الحجز بنجاح');
-      toast.success('تم إنشاء الحجز بنجاح');
+      toast.success('تم إنشاء الحجز بنجاح', { toastId: 'booking-create' });
       setShowModal(false);
       setFormData({
         packageId: '',
@@ -152,7 +159,7 @@ function BookingPage() {
     } catch (err) {
       const errorMessage = err.response?.data?.message || 'خطأ في إضافة الحجز';
       setError(errorMessage);
-      toast.error(errorMessage);
+      toast.error(errorMessage, { toastId: 'booking-create-error' });
     }
   };
 
@@ -166,11 +173,11 @@ function BookingPage() {
       });
       setBookings(response.data);
       setPage(1);
-      toast.success('تم البحث بنجاح');
+      toast.success('تم البحث بنجاح', { toastId: 'booking-search' });
     } catch (err) {
       const errorMessage = err.response?.data?.message || 'خطأ في البحث';
       setError(errorMessage);
-      toast.error(errorMessage);
+      toast.error(errorMessage, { toastId: 'booking-search-error' });
     }
   };
 
@@ -181,13 +188,13 @@ function BookingPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم حذف الحجز بنجاح');
-      toast.success('تم حذف الحجز بنجاح');
+      toast.success('تم حذف الحجز بنجاح', { toastId: `booking-delete-${id}` });
       setBookings(bookings.filter(booking => booking._id !== id));
       setTimeout(() => setSuccess(''), 2000);
     } catch (err) {
       const errorMessage = err.response?.data?.message || 'خطأ في حذف الحجز';
       setError(errorMessage);
-      toast.error(errorMessage);
+      toast.error(errorMessage, { toastId: `booking-delete-error-${id}` });
     }
   };
 

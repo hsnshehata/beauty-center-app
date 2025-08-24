@@ -1,8 +1,9 @@
 // client/src/pages/ServicePage.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Container, Row, Col, Card, Button, Modal, Form, Alert } from 'react-bootstrap';
+import { toast } from 'react-toastify';
 import Select from 'react-select';
 import Sidebar from '../components/Sidebar';
 import '../css/Service.css';
@@ -17,6 +18,7 @@ function ServicePage() {
   const [showExecuteModal, setShowExecuteModal] = useState(false);
   const [serviceForm, setServiceForm] = useState({ name: '', price: '' });
   const [executeForm, setExecuteForm] = useState({ serviceId: '', employeeId: '', price: 0 });
+  const hasFetched = useRef(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -42,8 +44,17 @@ function ServicePage() {
         setServices(servicesRes.data.map(s => ({ value: s._id, label: `${s.name} (${s.price} جنيه)` })));
         setEmployees(employeesRes.data.map(e => ({ value: e._id, label: e.name })));
         setExecutions(executionsRes.data);
+        if (!hasFetched.current) {
+          toast.success('تم جلب البيانات بنجاح', { toastId: 'services-fetch' });
+          hasFetched.current = true;
+        }
       } catch (err) {
-        setError(err.response?.data?.message || 'خطأ في جلب البيانات');
+        const errorMessage = err.response?.data?.message || 'خطأ في جلب البيانات';
+        setError(errorMessage);
+        if (!hasFetched.current) {
+          toast.error(errorMessage, { toastId: 'services-fetch-error' });
+          hasFetched.current = true;
+        }
       }
     };
 
@@ -78,6 +89,7 @@ function ServicePage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم إنشاء الخدمة بنجاح');
+      toast.success('تم إنشاء الخدمة بنجاح', { toastId: 'services-create' });
       setServiceForm({ name: '', price: '' });
       setShowAddServiceModal(false);
       const response = await axios.get('http://localhost:5000/api/services', {
@@ -86,7 +98,9 @@ function ServicePage() {
       setServices(response.data.map(s => ({ value: s._id, label: `${s.name} (${s.price} جنيه)` })));
       setTimeout(() => setSuccess(''), 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'خطأ في إنشاء الخدمة');
+      const errorMessage = err.response?.data?.message || 'خطأ في إنشاء الخدمة';
+      setError(errorMessage);
+      toast.error(errorMessage, { toastId: 'services-create-error' });
     }
   };
 
@@ -98,6 +112,7 @@ function ServicePage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم تسجيل الخدمة المنفذة بنجاح');
+      toast.success('تم تسجيل الخدمة المنفذة بنجاح', { toastId: 'services-execute' });
       setExecuteForm({ serviceId: '', employeeId: '', price: 0 });
       setShowExecuteModal(false);
       const response = await axios.get('http://localhost:5000/api/services/execute', {
@@ -106,7 +121,9 @@ function ServicePage() {
       setExecutions(response.data);
       setTimeout(() => setSuccess(''), 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'خطأ في تسجيل الخدمة');
+      const errorMessage = err.response?.data?.message || 'خطأ في تسجيل الخدمة';
+      setError(errorMessage);
+      toast.error(errorMessage, { toastId: 'services-execute-error' });
     }
   };
 

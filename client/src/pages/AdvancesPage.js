@@ -1,8 +1,9 @@
 // client/src/pages/AdvancesPage.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Container, Row, Col, Form, Button, Alert, Card } from 'react-bootstrap';
+import { toast } from 'react-toastify';
 import Select from 'react-select';
 import Sidebar from '../components/Sidebar';
 import '../css/Advances.css';
@@ -16,6 +17,7 @@ function AdvancesPage() {
   const [advances, setAdvances] = useState([]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const hasFetched = useRef(false); // لمنع تكرار الإشعارات
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -37,8 +39,17 @@ function AdvancesPage() {
         ]);
         setEmployees(employeesRes.data.map(e => ({ value: e._id, label: e.name })));
         setAdvances(advancesRes.data);
+        if (!hasFetched.current) {
+          toast.success('تم جلب بيانات السلف بنجاح', { toastId: 'advances-fetch' });
+          hasFetched.current = true;
+        }
       } catch (err) {
-        setError(err.response?.data?.message || 'خطأ في جلب البيانات');
+        const errorMessage = err.response?.data?.message || 'خطأ في جلب البيانات';
+        setError(errorMessage);
+        if (!hasFetched.current) {
+          toast.error(errorMessage, { toastId: 'advances-fetch-error' });
+          hasFetched.current = true;
+        }
       }
     };
 
@@ -62,6 +73,7 @@ function AdvancesPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم إنشاء السلفة بنجاح');
+      toast.success('تم إنشاء السلفة بنجاح', { toastId: 'advances-create' });
       setFormData({ employeeId: '', amount: '' });
       const response = await axios.get('http://localhost:5000/api/advances', {
         headers: { Authorization: `Bearer ${token}` },
@@ -69,7 +81,9 @@ function AdvancesPage() {
       setAdvances(response.data);
       setTimeout(() => setSuccess(''), 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'خطأ في إنشاء السلفة');
+      const errorMessage = err.response?.data?.message || 'خطأ في إنشاء السلفة';
+      setError(errorMessage);
+      toast.error(errorMessage, { toastId: 'advances-create-error' });
     }
   };
 

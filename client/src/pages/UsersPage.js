@@ -1,8 +1,9 @@
 // client/src/pages/UsersPage.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Container, Row, Col, Form, Button, Alert } from 'react-bootstrap';
+import { toast } from 'react-toastify';
 import Sidebar from '../components/Sidebar';
 import '../css/Users.css';
 
@@ -14,12 +15,19 @@ function UsersPage() {
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const hasFetched = useRef(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
       navigate('/login');
+      return;
+    }
+
+    if (!hasFetched.current) {
+      toast.success('تم تحميل صفحة إضافة المستخدم بنجاح', { toastId: 'users-page-load' });
+      hasFetched.current = true;
     }
   }, [navigate]);
 
@@ -36,10 +44,13 @@ function UsersPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم إنشاء المستخدم بنجاح');
+      toast.success('تم إنشاء المستخدم بنجاح', { toastId: 'users-create' });
       setFormData({ username: '', password: '', role: 'admin' });
       setTimeout(() => setSuccess(''), 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'خطأ في إنشاء المستخدم');
+      const errorMessage = err.response?.data?.message || 'خطأ في إنشاء المستخدم';
+      setError(errorMessage);
+      toast.error(errorMessage, { toastId: 'users-create-error' });
     }
   };
 

@@ -1,14 +1,16 @@
 // client/src/pages/ReceiptPage.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Container, Button, Alert } from 'react-bootstrap';
+import { toast } from 'react-toastify';
 import '../css/Receipt.css';
 
 function ReceiptPage() {
   const { id } = useParams();
   const [receipt, setReceipt] = useState(null);
   const [error, setError] = useState('');
+  const hasFetched = useRef(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,8 +26,17 @@ function ReceiptPage() {
           headers: { Authorization: `Bearer ${token}` },
         });
         setReceipt(response.data);
+        if (!hasFetched.current) {
+          toast.success('تم جلب بيانات الوصل بنجاح', { toastId: `receipt-fetch-${id}` });
+          hasFetched.current = true;
+        }
       } catch (err) {
-        setError(err.response?.data?.message || 'خطأ في جلب بيانات الوصل');
+        const errorMessage = err.response?.data?.message || 'خطأ في جلب بيانات الوصل';
+        setError(errorMessage);
+        if (!hasFetched.current) {
+          toast.error(errorMessage, { toastId: `receipt-fetch-error-${id}` });
+          hasFetched.current = true;
+        }
       }
     };
 
@@ -73,7 +84,7 @@ function ReceiptPage() {
           <p><strong>خدمة إضافية:</strong> {receipt.additionalService.name} - {receipt.additionalService.price} جنيه</p>
         )}
         {receipt.hairStraightening && (
-          <p><strong>فرد الشعر:</strong> {receipt.hairStraightening.price} جنيه (تاريخ: {receipt.hairStraightening.date})</p>
+          <p><strong>فرد الشعر:</strong> {receipt.hairStraighteningPrice} جنيه (تاريخ: {receipt.hairStraighteningDate})</p>
         )}
         <hr />
         <p><strong>الإجمالي:</strong> {receipt.totalPrice} جنيه</p>

@@ -1,8 +1,9 @@
 // client/src/pages/EmployeesPage.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Container, Row, Col, Form, Button, Alert } from 'react-bootstrap';
+import { toast } from 'react-toastify';
 import Sidebar from '../components/Sidebar';
 import '../css/Employees.css';
 
@@ -14,12 +15,19 @@ function EmployeesPage() {
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const hasFetched = useRef(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
       navigate('/login');
+      return;
+    }
+
+    if (!hasFetched.current) {
+      toast.success('تم تحميل صفحة إضافة الموظف بنجاح', { toastId: 'employees-page-load' });
+      hasFetched.current = true;
     }
   }, [navigate]);
 
@@ -36,10 +44,13 @@ function EmployeesPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم إنشاء الموظف بنجاح');
+      toast.success('تم إنشاء الموظف بنجاح', { toastId: 'employees-create' });
       setFormData({ name: '', phone: '', salary: '' });
       setTimeout(() => setSuccess(''), 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'خطأ في إنشاء الموظف');
+      const errorMessage = err.response?.data?.message || 'خطأ في إنشاء الموظف';
+      setError(errorMessage);
+      toast.error(errorMessage, { toastId: 'employees-create-error' });
     }
   };
 

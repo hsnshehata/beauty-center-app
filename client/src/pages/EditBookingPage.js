@@ -1,8 +1,9 @@
 // client/src/pages/EditBookingPage.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Container, Row, Col, Modal, Form, Button, Alert } from 'react-bootstrap';
+import { toast } from 'react-toastify';
 import Select from 'react-select';
 import Sidebar from '../components/Sidebar';
 import '../css/App.css';
@@ -29,6 +30,7 @@ function EditBookingPage() {
     hairStraighteningDate: '',
     deposit: 0,
   });
+  const hasFetched = useRef(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -70,7 +72,7 @@ function EditBookingPage() {
           city: booking.city || '',
           eventDate: booking.eventDate || '',
           hennaDate: booking.hennaPackage ? booking.hennaPackage.date || '' : '',
-          hairStraightening: !!booking.hairStraightening, // تحويل إلى boolean
+          hairStraightening: !!booking.hairStraightening,
           hairStraighteningPrice: parseFloat(booking.hairStraighteningPrice) || 0,
           hairStraighteningDate: booking.hairStraighteningDate || '',
           deposit: parseFloat(booking.deposit) || 0,
@@ -87,8 +89,17 @@ function EditBookingPage() {
           label: `${s.name} (${s.price} جنيه)`,
           price: s.price,
         })));
+        if (!hasFetched.current) {
+          toast.success('تم جلب بيانات الحجز بنجاح', { toastId: `edit-booking-fetch-${id}` });
+          hasFetched.current = true;
+        }
       } catch (err) {
-        setError(err.response?.data?.message || 'خطأ في جلب البيانات');
+        const errorMessage = err.response?.data?.message || 'خطأ في جلب البيانات';
+        setError(errorMessage);
+        if (!hasFetched.current) {
+          toast.error(errorMessage, { toastId: `edit-booking-error-${id}` });
+          hasFetched.current = true;
+        }
       }
     };
 
@@ -140,7 +151,7 @@ function EditBookingPage() {
         hennaPackageId: formData.hennaPackageId || null,
         photoPackageId: formData.photoPackageId || null,
         additionalService: formData.additionalService.serviceId ? formData.additionalService : null,
-        hairStraightening: !!formData.hairStraightening, // تحويل إلى boolean
+        hairStraightening: !!formData.hairStraightening,
         deposit: parseFloat(formData.deposit) || 0,
         hairStraighteningPrice: parseFloat(formData.hairStraighteningPrice) || 0,
       };
@@ -148,9 +159,12 @@ function EditBookingPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم تعديل الحجز بنجاح');
+      toast.success('تم تعديل الحجز بنجاح', { toastId: `edit-booking-update-${id}` });
       setTimeout(() => navigate('/bookings'), 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'خطأ في تعديل الحجز');
+      const errorMessage = err.response?.data?.message || 'خطأ في تعديل الحجز';
+      setError(errorMessage);
+      toast.error(errorMessage, { toastId: `edit-booking-update-error-${id}` });
       console.error('خطأ في الفرونت إند:', err.response?.data);
     }
   };

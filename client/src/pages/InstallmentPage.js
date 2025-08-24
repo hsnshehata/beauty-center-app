@@ -1,5 +1,5 @@
 // client/src/pages/InstallmentPage.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Container, Row, Col, Form, Button, Alert } from 'react-bootstrap';
@@ -13,6 +13,7 @@ function InstallmentPage() {
   const [booking, setBooking] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const hasFetched = useRef(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -28,10 +29,17 @@ function InstallmentPage() {
           headers: { Authorization: `Bearer ${token}` },
         });
         setBooking(response.data);
+        if (!hasFetched.current) {
+          toast.success('تم جلب تفاصيل الحجز بنجاح', { toastId: `installment-fetch-${id}` });
+          hasFetched.current = true;
+        }
       } catch (err) {
         const errorMessage = err.response?.data?.message || 'خطأ في جلب تفاصيل الحجز';
         setError(errorMessage);
-        toast.error(errorMessage);
+        if (!hasFetched.current) {
+          toast.error(errorMessage, { toastId: `installment-fetch-error-${id}` });
+          hasFetched.current = true;
+        }
       }
     };
 
@@ -49,13 +57,13 @@ function InstallmentPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم إضافة القسط بنجاح');
-      toast.success('تم إضافة القسط بنجاح');
+      toast.success('تم إضافة القسط بنجاح', { toastId: `installment-create-${id}` });
       setAmount('');
       setTimeout(() => navigate('/bookings'), 2000);
     } catch (err) {
       const errorMessage = err.response?.data?.message || 'خطأ في إضافة القسط';
       setError(errorMessage);
-      toast.error(errorMessage);
+      toast.error(errorMessage, { toastId: `installment-create-error-${id}` });
     }
   };
 

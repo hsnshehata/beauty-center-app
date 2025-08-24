@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Form, Button, Container, Alert } from 'react-bootstrap';
+import { toast } from 'react-toastify';
 
 function LoginPage() {
   const [username, setUsername] = useState('');
@@ -18,9 +19,12 @@ function LoginPage() {
         password,
       });
       localStorage.setItem('token', response.data.token);
+      toast.success('تم تسجيل الدخول بنجاح', { toastId: 'login-success' });
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.message || 'خطأ في تسجيل الدخول');
+      const errorMessage = err.response?.data?.message || 'خطأ في تسجيل الدخول';
+      setError(errorMessage);
+      toast.error(errorMessage, { toastId: 'login-error' });
     }
   };
 

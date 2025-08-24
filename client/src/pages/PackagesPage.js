@@ -1,8 +1,9 @@
 // client/src/pages/PackagesPage.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Container, Row, Col, Form, Button, Alert, Card, Modal } from 'react-bootstrap';
+import { toast } from 'react-toastify';
 import Select from 'react-select';
 import Sidebar from '../components/Sidebar';
 import '../css/Packages.css';
@@ -21,6 +22,7 @@ function PackagesPage() {
   const [success, setSuccess] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const hasFetched = useRef(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -42,8 +44,17 @@ function PackagesPage() {
         ]);
         setPackages(packagesRes.data);
         setServices(servicesRes.data.map(s => ({ value: s._id, label: `${s.name} (${s.price} جنيه)` })));
+        if (!hasFetched.current) {
+          toast.success('تم جلب الباكدجات بنجاح', { toastId: 'packages-fetch' });
+          hasFetched.current = true;
+        }
       } catch (err) {
-        setError(err.response?.data?.message || 'خطأ في جلب البيانات');
+        const errorMessage = err.response?.data?.message || 'خطأ في جلب البيانات';
+        setError(errorMessage);
+        if (!hasFetched.current) {
+          toast.error(errorMessage, { toastId: 'packages-fetch-error' });
+          hasFetched.current = true;
+        }
       }
     };
 
@@ -69,6 +80,7 @@ function PackagesPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم إنشاء الباكدج بنجاح');
+      toast.success('تم إنشاء الباكدج بنجاح', { toastId: 'packages-create' });
       setFormData({ name: '', price: '', type: 'makeup', services: [] });
       setShowAddModal(false);
       const response = await axios.get('http://localhost:5000/api/packages', {
@@ -77,7 +89,9 @@ function PackagesPage() {
       setPackages(response.data);
       setTimeout(() => setSuccess(''), 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'خطأ في إنشاء الباكدج');
+      const errorMessage = err.response?.data?.message || 'خطأ في إنشاء الباكدج';
+      setError(errorMessage);
+      toast.error(errorMessage, { toastId: 'packages-create-error' });
     }
   };
 
@@ -89,6 +103,7 @@ function PackagesPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم تعديل الباكدج بنجاح');
+      toast.success('تم تعديل الباكدج بنجاح', { toastId: `packages-update-${editData._id}` });
       setEditData(null);
       setShowEditModal(false);
       const response = await axios.get('http://localhost:5000/api/packages', {
@@ -97,7 +112,9 @@ function PackagesPage() {
       setPackages(response.data);
       setTimeout(() => setSuccess(''), 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'خطأ في تعديل الباكدج');
+      const errorMessage = err.response?.data?.message || 'خطأ في تعديل الباكدج';
+      setError(errorMessage);
+      toast.error(errorMessage, { toastId: `packages-update-error-${editData._id}` });
     }
   };
 
@@ -119,10 +136,13 @@ function PackagesPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم حذف الباكدج بنجاح');
+      toast.success('تم حذف الباكدج بنجاح', { toastId: `packages-delete-${id}` });
       setPackages(packages.filter(pkg => pkg._id !== id));
       setTimeout(() => setSuccess(''), 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'خطأ في حذف الباكدج');
+      const errorMessage = err.response?.data?.message || 'خطأ في حذف الباكدج';
+      setError(errorMessage);
+      toast.error(errorMessage, { toastId: `packages-delete-error-${id}` });
     }
   };
 

@@ -24,6 +24,7 @@ function PackagesPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const hasFetched = useRef(false);
   const navigate = useNavigate();
+  const API_BASE_URL = '/api';
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -35,10 +36,10 @@ function PackagesPage() {
     const fetchData = async () => {
       try {
         const [packagesRes, servicesRes] = await Promise.all([
-          axios.get('http://localhost:5000/api/packages', {
+          axios.get(`${API_BASE_URL}/packages`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get('http://localhost:5000/api/packageServices', {
+          axios.get(`${API_BASE_URL}/packageServices`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
@@ -76,14 +77,14 @@ function PackagesPage() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:5000/api/packages', formData, {
+      await axios.post(`${API_BASE_URL}/packages`, formData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم إنشاء الباكدج بنجاح');
       toast.success('تم إنشاء الباكدج بنجاح', { toastId: 'packages-create' });
       setFormData({ name: '', price: '', type: 'makeup', services: [] });
       setShowAddModal(false);
-      const response = await axios.get('http://localhost:5000/api/packages', {
+      const response = await axios.get(`${API_BASE_URL}/packages`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setPackages(response.data);
@@ -99,14 +100,14 @@ function PackagesPage() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`http://localhost:5000/api/packages/${editData._id}`, editData, {
+      await axios.put(`${API_BASE_URL}/packages/${editData._id}`, editData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم تعديل الباكدج بنجاح');
       toast.success('تم تعديل الباكدج بنجاح', { toastId: `packages-update-${editData._id}` });
       setEditData(null);
       setShowEditModal(false);
-      const response = await axios.get('http://localhost:5000/api/packages', {
+      const response = await axios.get(`${API_BASE_URL}/packages`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setPackages(response.data);
@@ -132,7 +133,7 @@ function PackagesPage() {
   const handleDelete = async (id) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/api/packages/${id}`, {
+      await axios.delete(`${API_BASE_URL}/packages/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم حذف الباكدج بنجاح');

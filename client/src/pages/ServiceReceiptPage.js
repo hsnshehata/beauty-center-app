@@ -14,6 +14,7 @@ function ServiceReceiptPage() {
   const [isLoading, setIsLoading] = useState(false);
   const hasFetched = useRef(false);
   const navigate = useNavigate();
+  const API_BASE_URL = '/api';
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -25,7 +26,7 @@ function ServiceReceiptPage() {
     const fetchReceipt = async () => {
       try {
         setIsLoading(true);
-        const response = await axios.get(`http://localhost:5000/api/services/receipt/${id}`, {
+        const response = await axios.get(`${API_BASE_URL}/services/receipt/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         console.log('Receipt data:', response.data);

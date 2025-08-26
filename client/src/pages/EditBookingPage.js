@@ -32,6 +32,7 @@ function EditBookingPage() {
   });
   const hasFetched = useRef(false);
   const navigate = useNavigate();
+  const API_BASE_URL = '/api';
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -43,17 +44,16 @@ function EditBookingPage() {
     const fetchData = async () => {
       try {
         const [bookingRes, packagesRes, servicesRes] = await Promise.all([
-          axios.get(`http://localhost:5000/api/bookings/${id}/receipt`, {
+          axios.get(`${API_BASE_URL}/bookings/${id}/receipt`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get('http://localhost:5000/api/packages', {
+          axios.get(`${API_BASE_URL}/packages`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get('http://localhost:5000/api/packageServices', {
+          axios.get(`${API_BASE_URL}/packageServices`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
-
         const booking = bookingRes.data;
         setFormData({
           packageId: booking.package ? booking.package._id || '' : '',
@@ -155,7 +155,7 @@ function EditBookingPage() {
         deposit: parseFloat(formData.deposit) || 0,
         hairStraighteningPrice: parseFloat(formData.hairStraighteningPrice) || 0,
       };
-      await axios.put(`http://localhost:5000/api/bookings/${id}`, payload, {
+      await axios.put(`${API_BASE_URL}/bookings/${id}`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم تعديل الحجز بنجاح');
@@ -171,41 +171,33 @@ function EditBookingPage() {
 
   const calculateTotalPrice = () => {
     let totalPrice = 0;
-
     if (formData.packageId) {
       const pkg = packages.find(p => p.value === formData.packageId);
       totalPrice += parseFloat(pkg?.price) || 0;
     }
-
     if (formData.hennaPackageId) {
       const hennaPkg = packages.find(p => p.value === formData.hennaPackageId);
       totalPrice += parseFloat(hennaPkg?.price) || 0;
     }
-
     if (formData.photoPackageId) {
       const photoPkg = packages.find(p => p.value === formData.photoPackageId);
       totalPrice += parseFloat(photoPkg?.price) || 0;
     }
-
     if (formData.returnedServices.length > 0) {
       totalPrice -= formData.returnedServices.reduce((sum, rs) => sum + parseFloat(rs.price) || 0, 0);
     }
-
     if (formData.additionalService.serviceId) {
       totalPrice += parseFloat(formData.additionalService.price) || 0;
     }
-
     if (formData.hairStraightening && formData.hairStraighteningPrice) {
       totalPrice += parseFloat(formData.hairStraighteningPrice) || 0;
     }
-
     return totalPrice >= 0 ? totalPrice : 0;
   };
 
   const totalPrice = calculateTotalPrice();
   const deposit = parseFloat(formData.deposit) || 0;
   const remainingBalance = totalPrice - deposit;
-
   const selectedPackage = packages.find(p => p.value === formData.packageId);
   const packageServices = selectedPackage ? services.filter(s => selectedPackage.services.some(ps => ps._id === s.value)) : [];
 

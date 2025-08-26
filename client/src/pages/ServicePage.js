@@ -25,6 +25,7 @@ function ServicePage() {
   const [isLoading, setIsLoading] = useState(false);
   const hasFetched = useRef(false);
   const navigate = useNavigate();
+  const API_BASE_URL = '/api';
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -38,21 +39,19 @@ function ServicePage() {
         setIsLoading(true);
         console.log('Fetching services, employees, and executions...');
         const [servicesRes, employeesRes, executionsRes] = await Promise.all([
-          axios.get('http://localhost:5000/api/services', {
+          axios.get(`${API_BASE_URL}/services`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get('http://localhost:5000/api/employees', {
+          axios.get(`${API_BASE_URL}/employees`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get('http://localhost:5000/api/services/execute', {
+          axios.get(`${API_BASE_URL}/services/execute`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
-
         console.log('Services response:', servicesRes.data);
         console.log('Employees response:', employeesRes.data);
         console.log('Executions response:', executionsRes.data);
-
         setServices(servicesRes.data.map(s => ({
           value: s._id,
           label: `${s.name} (${s.price} جنيه)`,
@@ -119,14 +118,14 @@ function ServicePage() {
     try {
       const token = localStorage.getItem('token');
       console.log('Adding new service:', serviceForm);
-      await axios.post('http://localhost:5000/api/services', serviceForm, {
+      await axios.post(`${API_BASE_URL}/services`, serviceForm, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم إنشاء الخدمة بنجاح');
       toast.success('تم إنشاء الخدمة بنجاح', { toastId: 'services-create' });
       setServiceForm({ name: '', price: '' });
       setShowAddServiceModal(false);
-      const servicesRes = await axios.get('http://localhost:5000/api/services', {
+      const servicesRes = await axios.get(`${API_BASE_URL}/services`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setServices(servicesRes.data.map(s => ({
@@ -162,14 +161,14 @@ function ServicePage() {
         price: parseFloat(executeForm.price),
       };
       console.log('Executing service payload:', payload);
-      const response = await axios.post('http://localhost:5000/api/services/execute', payload, {
+      const response = await axios.post(`${API_BASE_URL}/services/execute`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم تسجيل الخدمة المنفذة بنجاح');
       toast.success('تم تسجيل الخدمة المنفذة بنجاح', { toastId: 'services-execute' });
       setExecuteForm({ serviceIds: [], employeeId: '', price: 0 });
       setShowExecuteModal(false);
-      const executionsRes = await axios.get('http://localhost:5000/api/services/execute', {
+      const executionsRes = await axios.get(`${API_BASE_URL}/services/execute`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setExecutions(executionsRes.data);
@@ -201,7 +200,7 @@ function ServicePage() {
     try {
       const token = localStorage.getItem('token');
       console.log('Editing service:', editServiceForm);
-      await axios.put(`http://localhost:5000/api/services/${editServiceForm.id}`, {
+      await axios.put(`${API_BASE_URL}/services/${editServiceForm.id}`, {
         name: editServiceForm.name,
         price: parseFloat(editServiceForm.price) || 0,
       }, {
@@ -211,7 +210,7 @@ function ServicePage() {
       toast.success('تم تعديل الخدمة بنجاح', { toastId: `services-edit-${editServiceForm.id}` });
       setEditServiceForm({ id: '', name: '', price: '' });
       setShowEditServiceModal(false);
-      const servicesRes = await axios.get('http://localhost:5000/api/services', {
+      const servicesRes = await axios.get(`${API_BASE_URL}/services`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setServices(servicesRes.data.map(s => ({
@@ -235,12 +234,12 @@ function ServicePage() {
     try {
       const token = localStorage.getItem('token');
       console.log('Deleting service:', serviceId);
-      await axios.delete(`http://localhost:5000/api/services/${serviceId}`, {
+      await axios.delete(`${API_BASE_URL}/services/${serviceId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم حذف الخدمة بنجاح');
       toast.success('تم حذف الخدمة بنجاح', { toastId: `services-delete-${serviceId}` });
-      const servicesRes = await axios.get('http://localhost:5000/api/services', {
+      const servicesRes = await axios.get(`${API_BASE_URL}/services`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setServices(servicesRes.data.map(s => ({
@@ -264,12 +263,12 @@ function ServicePage() {
     try {
       const token = localStorage.getItem('token');
       console.log('Deleting execution:', executionId);
-      await axios.delete(`http://localhost:5000/api/services/execute/${executionId}`, {
+      await axios.delete(`${API_BASE_URL}/services/execute/${executionId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم حذف الخدمة المنفذة بنجاح');
       toast.success('تم حذف الخدمة المنفذة بنجاح', { toastId: `execution-delete-${executionId}` });
-      const executionsRes = await axios.get('http://localhost:5000/api/services/execute', {
+      const executionsRes = await axios.get(`${API_BASE_URL}/services/execute`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setExecutions(executionsRes.data);

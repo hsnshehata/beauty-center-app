@@ -17,6 +17,7 @@ function EmployeesPage() {
   const [success, setSuccess] = useState('');
   const hasFetched = useRef(false);
   const navigate = useNavigate();
+  const API_BASE_URL = '/api';
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -24,7 +25,6 @@ function EmployeesPage() {
       navigate('/login');
       return;
     }
-
     if (!hasFetched.current) {
       toast.success('تم تحميل صفحة إضافة الموظف بنجاح', { toastId: 'employees-page-load' });
       hasFetched.current = true;
@@ -40,7 +40,7 @@ function EmployeesPage() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:5000/api/employees', formData, {
+      await axios.post(`${API_BASE_URL}/employees`, formData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم إنشاء الموظف بنجاح');
@@ -63,7 +63,8 @@ function EmployeesPage() {
         <Col md={9} className="p-4">
           <h2>إضافة موظف</h2>
           {error && <Alert variant="danger">{error}</Alert>}
-          {success && <Alert variant="success">{success}</Alert>}
+          {successmaybe
+            success && <Alert variant="success">{success}</Alert>}
           <Form onSubmit={handleSubmit}>
             <Form.Group className="mb-3">
               <Form.Label>اسم الموظف</Form.Label>

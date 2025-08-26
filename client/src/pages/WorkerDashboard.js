@@ -16,6 +16,7 @@ function WorkerDashboard() {
   const [error, setError] = useState('');
   const hasFetched = useRef(false);
   const navigate = useNavigate();
+  const API_BASE_URL = '/api';
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -27,10 +28,10 @@ function WorkerDashboard() {
     const fetchUserData = async () => {
       try {
         const [userRes, historyRes] = await Promise.all([
-          axios.get('http://localhost:5000/api/auth/me', {
+          axios.get(`${API_BASE_URL}/auth/me`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get('http://localhost:5000/api/worker-points', {
+          axios.get(`${API_BASE_URL}/worker-points`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
@@ -76,11 +77,11 @@ function WorkerDashboard() {
       const token = localStorage.getItem('token');
       let response;
       try {
-        response = await axios.get(`http://localhost:5000/api/bookings/${id}/services`, {
+        response = await axios.get(`${API_BASE_URL}/bookings/${id}/services`, {
           headers: { Authorization: `Bearer ${token}` },
         });
       } catch (err) {
-        response = await axios.get(`http://localhost:5000/api/services/execute/${id}`, {
+        response = await axios.get(`${API_BASE_URL}/services/execute/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
       }
@@ -97,11 +98,11 @@ function WorkerDashboard() {
     try {
       const token = localStorage.getItem('token');
       if (service.type === 'serviceExecution') {
-        await axios.post(`http://localhost:5000/api/services/execute/${service.id}`, {}, {
+        await axios.post(`${API_BASE_URL}/services/execute/${service.id}`, {}, {
           headers: { Authorization: `Bearer ${token}` },
         });
       } else {
-        await axios.post(`http://localhost:5000/api/bookings/${service.bookingId}/execute`, {
+        await axios.post(`${API_BASE_URL}/bookings/${service.bookingId}/execute`, {
           serviceType: service.type,
           serviceIndex: service.index,
         }, {

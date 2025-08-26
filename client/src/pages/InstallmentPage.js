@@ -15,6 +15,7 @@ function InstallmentPage() {
   const [success, setSuccess] = useState('');
   const hasFetched = useRef(false);
   const navigate = useNavigate();
+  const API_BASE_URL = '/api';
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -25,7 +26,7 @@ function InstallmentPage() {
 
     const fetchBooking = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/api/bookings/${id}/receipt`, {
+        const response = await axios.get(`${API_BASE_URL}/bookings/${id}/receipt`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setBooking(response.data);
@@ -50,7 +51,7 @@ function InstallmentPage() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:5000/api/installments', {
+      await axios.post(`${API_BASE_URL}/installments`, {
         bookingId: id,
         amount: parseFloat(amount),
       }, {

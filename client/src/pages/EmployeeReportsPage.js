@@ -20,6 +20,7 @@ function EmployeeReportsPage() {
   const hasFetchedEmployees = useRef(false);
   const hasFetchedReport = useRef(false);
   const navigate = useNavigate();
+  const API_BASE_URL = '/api';
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -30,7 +31,7 @@ function EmployeeReportsPage() {
 
     const fetchEmployees = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/employees', {
+        const response = await axios.get(`${API_BASE_URL}/employees`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setEmployees(response.data.map(e => ({ value: e._id, label: e.name })));
@@ -65,7 +66,7 @@ function EmployeeReportsPage() {
     try {
       const token = localStorage.getItem('token');
       const { startDate, endDate, employeeId } = formData;
-      const response = await axios.get(`http://localhost:5000/api/reports/employees?startDate=${startDate}&endDate=${endDate}&employeeId=${employeeId}`, {
+      const response = await axios.get(`${API_BASE_URL}/reports/employees?startDate=${startDate}&endDate=${endDate}&employeeId=${employeeId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setReport(response.data);

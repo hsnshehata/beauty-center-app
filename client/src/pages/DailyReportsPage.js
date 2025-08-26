@@ -12,6 +12,7 @@ function DailyReportsPage() {
   const [error, setError] = useState('');
   const hasFetched = useRef(false);
   const navigate = useNavigate();
+  const API_BASE_URL = '/api';
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -22,7 +23,7 @@ function DailyReportsPage() {
 
     const fetchReport = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/reports/daily', {
+        const response = await axios.get(`${API_BASE_URL}/reports/daily`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setReport(response.data);

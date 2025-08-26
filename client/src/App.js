@@ -10,6 +10,7 @@ import BookingDetailsPage from './pages/BookingDetailsPage';
 import InstallmentPage from './pages/InstallmentPage';
 import EditBookingPage from './pages/EditBookingPage';
 import ServicePage from './pages/ServicePage';
+import ServiceReceiptPage from './pages/ServiceReceiptPage'; // أضفنا الصفحة الجديدة
 import UsersPage from './pages/UsersPage';
 import PackagesPage from './pages/PackagesPage';
 import DailyReportsPage from './pages/DailyReportsPage';
@@ -36,6 +37,7 @@ function App() {
           <Route path="/installment/:id" element={<InstallmentPage />} />
           <Route path="/edit-booking/:id" element={<EditBookingPage />} />
           <Route path="/services" element={<ServicePage />} />
+          <Route path="/service-receipt/:id" element={<ServiceReceiptPage />} /> {/* أضفنا الروت الجديد */}
           <Route path="/users" element={<UsersPage />} />
           <Route path="/packages" element={<PackagesPage />} />
           <Route path="/reports/daily" element={<DailyReportsPage />} />

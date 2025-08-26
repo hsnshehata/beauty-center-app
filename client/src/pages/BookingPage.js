@@ -35,6 +35,7 @@ function BookingPage() {
   });
   const hasFetched = useRef(false);
   const navigate = useNavigate();
+  const API_BASE_URL = '/api';
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -46,13 +47,13 @@ function BookingPage() {
     const fetchData = async () => {
       try {
         const [bookingsRes, packagesRes, servicesRes] = await Promise.all([
-          axios.get(`http://localhost:5000/api/bookings?page=${page}&limit=50`, {
+          axios.get(`${API_BASE_URL}/bookings?page=${page}&limit=50`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get('http://localhost:5000/api/packages', {
+          axios.get(`${API_BASE_URL}/packages`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get('http://localhost:5000/api/packageServices', {
+          axios.get(`${API_BASE_URL}/packageServices`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
@@ -129,7 +130,7 @@ function BookingPage() {
         deposit: parseFloat(formData.deposit) || 0,
         hairStraighteningPrice: parseFloat(formData.hairStraighteningPrice) || 0,
       };
-      await axios.post('http://localhost:5000/api/bookings', payload, {
+      await axios.post(`${API_BASE_URL}/bookings`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم إنشاء الحجز بنجاح');
@@ -151,7 +152,7 @@ function BookingPage() {
         hairStraighteningDate: '',
         deposit: 0,
       });
-      const bookingsRes = await axios.get(`http://localhost:5000/api/bookings?page=${page}&limit=50`, {
+      const bookingsRes = await axios.get(`${API_BASE_URL}/bookings?page=${page}&limit=50`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setBookings(bookingsRes.data);
@@ -168,7 +169,7 @@ function BookingPage() {
     try {
       const token = localStorage.getItem('token');
       const query = new URLSearchParams(search).toString();
-      const response = await axios.get(`http://localhost:5000/api/bookings/search?${query}`, {
+      const response = await axios.get(`${API_BASE_URL}/bookings/search?${query}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setBookings(response.data);
@@ -184,7 +185,7 @@ function BookingPage() {
   const handleDelete = async (id) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/api/bookings/${id}`, {
+      await axios.delete(`${API_BASE_URL}/bookings/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم حذف الحجز بنجاح');
@@ -200,41 +201,33 @@ function BookingPage() {
 
   const calculateTotalPrice = () => {
     let totalPrice = 0;
-
     if (formData.packageId) {
       const pkg = packages.find(p => p.value === formData.packageId);
       totalPrice += parseFloat(pkg?.price) || 0;
     }
-
     if (formData.hennaPackageId) {
       const hennaPkg = packages.find(p => p.value === formData.hennaPackageId);
       totalPrice += parseFloat(hennaPkg?.price) || 0;
     }
-
     if (formData.photoPackageId) {
       const photoPkg = packages.find(p => p.value === formData.photoPackageId);
       totalPrice += parseFloat(photoPkg?.price) || 0;
     }
-
     if (formData.returnedServices.length > 0) {
       totalPrice -= formData.returnedServices.reduce((sum, rs) => sum + parseFloat(rs.price) || 0, 0);
     }
-
     if (formData.additionalService.serviceId) {
       totalPrice += parseFloat(formData.additionalService.price) || 0;
     }
-
     if (formData.hairStraightening && formData.hairStraighteningPrice) {
       totalPrice += parseFloat(formData.hairStraighteningPrice) || 0;
     }
-
     return totalPrice >= 0 ? totalPrice : 0;
   };
 
   const totalPrice = calculateTotalPrice();
   const deposit = parseFloat(formData.deposit) || 0;
   const remainingBalance = totalPrice - deposit;
-
   const selectedPackage = packages.find(p => p.value === formData.packageId);
   const packageServices = selectedPackage ? services.filter(s => selectedPackage.services.some(ps => ps._id === s.value)) : [];
 

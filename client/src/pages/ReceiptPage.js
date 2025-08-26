@@ -13,6 +13,7 @@ function ReceiptPage() {
   const [error, setError] = useState('');
   const hasFetched = useRef(false);
   const navigate = useNavigate();
+  const API_BASE_URL = '/api';
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -23,7 +24,7 @@ function ReceiptPage() {
 
     const fetchReceipt = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/api/bookings/${id}/receipt`, {
+        const response = await axios.get(`${API_BASE_URL}/bookings/${id}/receipt`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setReceipt(response.data);

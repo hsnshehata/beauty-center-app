@@ -20,6 +20,7 @@ function PackageServicesPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const hasFetched = useRef(false);
   const navigate = useNavigate();
+  const API_BASE_URL = '/api';
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -30,7 +31,7 @@ function PackageServicesPage() {
 
     const fetchServices = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/packageServices', {
+        const response = await axios.get(`${API_BASE_URL}/packageServices`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setServices(response.data);
@@ -61,14 +62,14 @@ function PackageServicesPage() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:5000/api/packageServices', formData, {
+      await axios.post(`${API_BASE_URL}/packageServices`, formData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم إنشاء الخدمة بنجاح');
       toast.success('تم إنشاء الخدمة بنجاح', { toastId: 'package-services-create' });
       setFormData({ name: '', price: '' });
       setShowAddModal(false);
-      const response = await axios.get('http://localhost:5000/api/packageServices', {
+      const response = await axios.get(`${API_BASE_URL}/packageServices`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setServices(response.data);
@@ -84,14 +85,14 @@ function PackageServicesPage() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`http://localhost:5000/api/packageServices/${editData._id}`, editData, {
+      await axios.put(`${API_BASE_URL}/packageServices/${editData._id}`, editData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم تعديل الخدمة بنجاح');
       toast.success('تم تعديل الخدمة بنجاح', { toastId: `package-services-update-${editData._id}` });
       setEditData(null);
       setShowEditModal(false);
-      const response = await axios.get('http://localhost:5000/api/packageServices', {
+      const response = await axios.get(`${API_BASE_URL}/packageServices`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setServices(response.data);
@@ -115,7 +116,7 @@ function PackageServicesPage() {
   const handleDelete = async (id) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/api/packageServices/${id}`, {
+      await axios.delete(`${API_BASE_URL}/packageServices/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم حذف الخدمة بنجاح');

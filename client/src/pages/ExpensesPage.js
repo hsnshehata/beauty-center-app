@@ -17,6 +17,7 @@ function ExpensesPage() {
   const [success, setSuccess] = useState('');
   const hasFetched = useRef(false);
   const navigate = useNavigate();
+  const API_BASE_URL = '/api';
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -27,7 +28,7 @@ function ExpensesPage() {
 
     const fetchExpenses = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/expenses', {
+        const response = await axios.get(`${API_BASE_URL}/expenses`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setExpenses(response.data);
@@ -57,13 +58,13 @@ function ExpensesPage() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:5000/api/expenses', formData, {
+      await axios.post(`${API_BASE_URL}/expenses`, formData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم إنشاء المصروف بنجاح');
       toast.success('تم إنشاء المصروف بنجاح', { toastId: 'expenses-create' });
       setFormData({ details: '', amount: '' });
-      const response = await axios.get('http://localhost:5000/api/expenses', {
+      const response = await axios.get(`${API_BASE_URL}/expenses`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setExpenses(response.data);

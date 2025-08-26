@@ -14,6 +14,7 @@ function BookingDetailsPage() {
   const [error, setError] = useState('');
   const hasFetched = useRef(false);
   const navigate = useNavigate();
+  const API_BASE_URL = '/api';
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -25,14 +26,13 @@ function BookingDetailsPage() {
     const fetchData = async () => {
       try {
         const [bookingRes, installmentsRes] = await Promise.all([
-          axios.get(`http://localhost:5000/api/bookings/${id}/receipt`, {
+          axios.get(`${API_BASE_URL}/bookings/${id}/receipt`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get(`http://localhost:5000/api/installments/booking/${id}`, {
+          axios.get(`${API_BASE_URL}/installments/booking/${id}`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
-
         setBooking(bookingRes.data);
         setInstallments(installmentsRes.data);
         if (!hasFetched.current) {

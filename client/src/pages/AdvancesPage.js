@@ -19,6 +19,7 @@ function AdvancesPage() {
   const [success, setSuccess] = useState('');
   const hasFetched = useRef(false); // لمنع تكرار الإشعارات
   const navigate = useNavigate();
+  const API_BASE_URL = '/api';
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -30,10 +31,10 @@ function AdvancesPage() {
     const fetchData = async () => {
       try {
         const [employeesRes, advancesRes] = await Promise.all([
-          axios.get('http://localhost:5000/api/employees', {
+          axios.get(`${API_BASE_URL}/employees`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get('http://localhost:5000/api/advances', {
+          axios.get(`${API_BASE_URL}/advances`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
@@ -69,13 +70,13 @@ function AdvancesPage() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:5000/api/advances', formData, {
+      await axios.post(`${API_BASE_URL}/advances`, formData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم إنشاء السلفة بنجاح');
       toast.success('تم إنشاء السلفة بنجاح', { toastId: 'advances-create' });
       setFormData({ employeeId: '', amount: '' });
-      const response = await axios.get('http://localhost:5000/api/advances', {
+      const response = await axios.get(`${API_BASE_URL}/advances`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setAdvances(response.data);

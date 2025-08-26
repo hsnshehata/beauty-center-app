@@ -12,6 +12,7 @@ function HomePage() {
   const [error, setError] = useState('');
   const hasFetched = useRef(false); // لمنع تكرار الإشعارات
   const navigate = useNavigate();
+  const API_BASE_URL = '/api';
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -22,7 +23,7 @@ function HomePage() {
 
     const fetchBookings = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/bookings/today', {
+        const response = await axios.get(`${API_BASE_URL}/bookings/today`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setBookings(response.data);

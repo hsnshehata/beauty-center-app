@@ -17,6 +17,7 @@ function UsersPage() {
   const [success, setSuccess] = useState('');
   const hasFetched = useRef(false);
   const navigate = useNavigate();
+  const API_BASE_URL = '/api';
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -24,7 +25,6 @@ function UsersPage() {
       navigate('/login');
       return;
     }
-
     if (!hasFetched.current) {
       toast.success('تم تحميل صفحة إضافة المستخدم بنجاح', { toastId: 'users-page-load' });
       hasFetched.current = true;
@@ -40,7 +40,7 @@ function UsersPage() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:5000/api/auth/register', formData, {
+      await axios.post(`${API_BASE_URL}/auth/register`, formData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuccess('تم إنشاء المستخدم بنجاح');
